@@ -215,6 +215,91 @@ describe 'garden' do
         expect(rendered_template['server']['enable-container-network-metrics']).to eql(nil)
       end
 
+      context 'containerd section' do
+        it 'sets the containerd socket' do
+          expect(rendered_template['containerd']['containerd-socket']).to eql('/var/vcap/sys/run/containerd/containerd.sock')
+        end
+
+        it 'does not set containerd-runtime-type by default' do
+          expect(rendered_template['containerd']['containerd-runtime-type']).to be_nil
+        end
+
+        it 'does not set use-containerd-for-processes by default' do
+          expect(rendered_template['containerd']['use-containerd-for-processes']).to be_nil
+        end
+      end
+
+      context 'when containerd_runtime_type is set' do
+        let(:properties) {
+          {
+            'garden' => {
+              'containerd_runtime_type' => 'io.containerd.runsc.v1',
+            }
+          }
+        }
+
+        it 'sets containerd-runtime-type in config.ini' do
+          expect(rendered_template['containerd']['containerd-runtime-type']).to eql('io.containerd.runsc.v1')
+        end
+
+        it 'does not set use-containerd-for-processes unless explicitly enabled' do
+          expect(rendered_template['containerd']['use-containerd-for-processes']).to be_nil
+        end
+      end
+
+      context 'when use_containerd_for_processes is enabled' do
+        let(:properties) {
+          {
+            'garden' => {
+              'use_containerd_for_processes' => true,
+            }
+          }
+        }
+
+        it 'sets use-containerd-for-processes to true' do
+          expect(rendered_template['containerd']['use-containerd-for-processes']).to eql(true)
+        end
+      end
+
+      context 'when both containerd_runtime_type and use_containerd_for_processes are set' do
+        let(:properties) {
+          {
+            'garden' => {
+              'containerd_runtime_type' => 'io.containerd.runsc.v1',
+              'use_containerd_for_processes' => true,
+            }
+          }
+        }
+
+        it 'sets containerd-runtime-type' do
+          expect(rendered_template['containerd']['containerd-runtime-type']).to eql('io.containerd.runsc.v1')
+        end
+
+        it 'sets use-containerd-for-processes' do
+          expect(rendered_template['containerd']['use-containerd-for-processes']).to eql(true)
+        end
+
+        it 'still sets the containerd socket' do
+          expect(rendered_template['containerd']['containerd-socket']).to eql('/var/vcap/sys/run/containerd/containerd.sock')
+        end
+      end
+
+      context 'when containerd_mode is disabled' do
+        let(:properties) {
+          {
+            'garden' => {
+              'containerd_mode' => false,
+              'containerd_runtime_type' => 'io.containerd.runsc.v1',
+              'use_containerd_for_processes' => true,
+            }
+          }
+        }
+
+        it 'does not render the containerd section at all' do
+          expect(rendered_template['containerd']).to be_nil
+        end
+      end
+
       context 'when container network metrics are enabled' do
         let(:properties) {
           {

@@ -216,6 +216,14 @@ properties:
     description: "Use containerd for container lifecycle management. NOTE: cannot be used in combination with bpm"
     default: true
 
+  garden.containerd_runtime_type:
+    description: "Containerd runtime type to use for containers (e.g. io.containerd.runsc.v1 for gVisor). When empty, the default containerd runtime (runc) is used."
+    default: ""
+
+  garden.use_containerd_for_processes:
+    description: "Route process exec calls through containerd instead of the runtime binary directly. Required when using an alternative containerd runtime type (e.g. gVisor) so that exec/healthcheck operations target the correct runtime."
+    default: false
+
   garden.tcp_keepalive_time:
     description: Sets the `net.ipv4.tcp_keepalive_time` kernel parameter in containers. If not specified, the value from the linux init_net namespace is used.
 
