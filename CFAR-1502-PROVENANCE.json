@@ -8,7 +8,7 @@
     "repository": "https://github.com/vlast3k/guardian.git",
     "branch": "cfar-1502-cleanup7",
     "base_commit": "d707a33f8c96569d1f5570b274b24f43132c9e08",
-    "source_commit": "186b414477c98ed9fab5707a9a8c79d8e55ae80b",
+    "source_commit": "c30c6c4c98c8312b47549d2e2a0a4a4d6c6889a0",
     "required_commits": [
       "41ad7e838",
       "18bd18a5c",
