@@ -1,7 +1,7 @@
 [submodule "src/guardian"]
 	path = src/guardian
-	url = https://github.com/cloudfoundry/guardian
-	branch = main
+	url = https://github.com/vlast3k/guardian.git
+	branch = cfar-1502-cleanup7
 [submodule "src/garden"]
 	path = src/garden
 	url = https://github.com/cloudfoundry/garden

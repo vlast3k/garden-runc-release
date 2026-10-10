@@ -217,15 +217,15 @@ describe 'garden' do
 
       context 'containerd section' do
         it 'sets the containerd socket' do
-          expect(rendered_template['containerd']['containerd-socket']).to eql('/var/vcap/sys/run/containerd/containerd.sock')
+          expect(rendered_template['server']['containerd-socket']).to eql('/var/vcap/sys/run/containerd/containerd.sock')
         end
 
         it 'does not set containerd-runtime-type by default' do
-          expect(rendered_template['containerd']['containerd-runtime-type']).to be_nil
+          expect(rendered_template['server']['containerd-runtime-type']).to be_nil
         end
 
         it 'does not set use-containerd-for-processes by default' do
-          expect(rendered_template['containerd']['use-containerd-for-processes']).to be_nil
+          expect(rendered_template['server']['use-containerd-for-processes']).to be_nil
         end
       end
 
@@ -239,11 +239,11 @@ describe 'garden' do
         }
 
         it 'sets containerd-runtime-type in config.ini' do
-          expect(rendered_template['containerd']['containerd-runtime-type']).to eql('io.containerd.runsc.v1')
+          expect(rendered_template['server']['containerd-runtime-type']).to eql('io.containerd.runsc.v1')
         end
 
         it 'does not set use-containerd-for-processes unless explicitly enabled' do
-          expect(rendered_template['containerd']['use-containerd-for-processes']).to be_nil
+          expect(rendered_template['server']['use-containerd-for-processes']).to be_nil
         end
       end
 
@@ -257,7 +257,7 @@ describe 'garden' do
         }
 
         it 'sets use-containerd-for-processes to true' do
-          expect(rendered_template['containerd']['use-containerd-for-processes']).to eql(true)
+          expect(rendered_template['server']['use-containerd-for-processes']).to eql(true)
         end
       end
 
@@ -272,15 +272,15 @@ describe 'garden' do
         }
 
         it 'sets containerd-runtime-type' do
-          expect(rendered_template['containerd']['containerd-runtime-type']).to eql('io.containerd.runsc.v1')
+          expect(rendered_template['server']['containerd-runtime-type']).to eql('io.containerd.runsc.v1')
         end
 
         it 'sets use-containerd-for-processes' do
-          expect(rendered_template['containerd']['use-containerd-for-processes']).to eql(true)
+          expect(rendered_template['server']['use-containerd-for-processes']).to eql(true)
         end
 
         it 'still sets the containerd socket' do
-          expect(rendered_template['containerd']['containerd-socket']).to eql('/var/vcap/sys/run/containerd/containerd.sock')
+          expect(rendered_template['server']['containerd-socket']).to eql('/var/vcap/sys/run/containerd/containerd.sock')
         end
       end
 
@@ -295,8 +295,10 @@ describe 'garden' do
           }
         }
 
-        it 'does not render the containerd section at all' do
-          expect(rendered_template['containerd']).to be_nil
+        it 'does not render containerd settings' do
+          expect(rendered_template['server']['containerd-socket']).to be_nil
+          expect(rendered_template['server']['containerd-runtime-type']).to be_nil
+          expect(rendered_template['server']['use-containerd-for-processes']).to be_nil
         end
       end
 

@@ -1,0 +1,42 @@
+{
+  "release": {
+    "name": "garden-runc",
+    "version": "1.93.0-cfar1502",
+    "base_commit": "bd59256c262bfef535a668c2382648e856dd6e58"
+  },
+  "guardian": {
+    "repository": "https://github.com/vlast3k/guardian.git",
+    "branch": "cfar-1502-cleanup7",
+    "base_commit": "d707a33f8c96569d1f5570b274b24f43132c9e08",
+    "source_commit": "186b414477c98ed9fab5707a9a8c79d8e55ae80b",
+    "required_commits": [
+      "41ad7e838",
+      "18bd18a5c",
+      "2d6d38a89",
+      "6d06bafba",
+      "e1454dd8b",
+      "c753dcc6e",
+      "4afd8d93b",
+      "646841127",
+      "d97450684",
+      "11ad841bf",
+      "c230d3b6f",
+      "d9eeb38fd",
+      "5a003d326",
+      "fbb0d75f1",
+      "732d33a6f",
+      "b124464cb",
+      "d707a33f8"
+    ]
+  },
+  "accepted_cleanup7_evidence": {
+    "release": "garden-runc/1.93.0-cfar1499-cleanup7",
+    "archive_size": 254525623,
+    "archive_sha256": "11fa7ced0f239fbb4c00f570b617ccebfcf6d230018c5c41d6df585d90398289",
+    "canary_gdn_sha256": "ba524dd14acbeff15a1bb1d234da869c19f18feb65d7dfd1bc46b40307b0a3bc",
+    "nerd_go_sha256": "2002118f6087021cefc08e7ae37ca31d30a93c3fa877c16a7d5e6f214627d378",
+    "nerd_linux_test_go_sha256": "80081b4b3743ce8ce5df55a003f62534c5b678026c80acda85b926b98cabf490",
+    "upload_task": 27301,
+    "deployment_task": 27317
+  }
+}
