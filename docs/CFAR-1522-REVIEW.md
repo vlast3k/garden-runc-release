@@ -133,3 +133,97 @@ source is not a live rollback authorization. Next discriminating checks: hydrate
 the exact recorded Go archive through the approved blob workflow and rerun the
 unchanged read-only CLI on the committed clean release; then execute the separately
 required real-runsc CREATED-task lifecycle gate with release-matched binaries.
+
+## Independent Review Repair
+
+Observation date: 2026-10-15. Authorized takeover of the clean existing worktree
+at `4cc0277b1e6cf50ddac05a0d67d135eb6b9e4feb`, on the same branch. This section
+supersedes the original 46-test result for the verifier. The repair is the local
+commit containing this section; no push, merge, parent edit, Jira write, template
+change, infrastructure operation or artifact hydration is included.
+
+The independent review identified eight executable false passes. The original
+verifier matched YAML text without checking Ruby's parsed values, accepted a
+matching extraction command inside unreachable shell code, and skipped empty Git
+identities through truthiness guards. The repair changes only:
+
+- `scripts/verify_provenance.py`: compare structured YAML values, validate the
+	supported Go packaging command sequence, and compare Git identities even when
+	empty or unavailable. Git command errors remain explicit failures.
+- `scripts/yaml_to_json.rb`: Ruby Psych subprocess helper; inspect the YAML AST
+	recursively for duplicate scalar keys, require one document and a mapping,
+	reject merge keys, and materialize with `Psych.safe_load` without aliases or
+	permitted classes. No YAML line matching remains in the verifier. The requested
+	runtime helper was not present in either available runtime checkout, so this
+	uses the same AST/safe-load helper pattern rather than claiming a byte-for-byte
+	copy of unavailable source.
+- `scripts/tests/test_verify_provenance.py`: eight regression cases and five
+	supplementary tests, all exercising the actual CLI subprocess. Every new
+	invalid-input test first verifies its own valid fixture. Invalid tracked input
+	is committed before checking rejection, so dirtiness is not the rejection
+	mechanism. The existing snapshot assertion covers source and Git metadata
+	before and after every accepted or rejected verifier invocation.
+- This report. Parent build-document corrections remain with the parent owner.
+
+| Regression | Invalid input now rejected |
+| --- | --- |
+| Duplicate quoted release key | An apparently correct `final_name` followed by `"final_name": wrong`. |
+| Unused package archive | Expected archive under `unused`, with a different archive in actual `files`. |
+| Duplicate blob archive | A quoted duplicate archive entry overwrites the apparent size/hash. |
+| Dead extraction | Correct `tar xzf` inside `if false`, followed by executed `tar -xzf wrong.tar.gz`. |
+| Empty release origin | Successful Git config query returns an empty URL. |
+| Empty recorded Guardian URL | Empty URL in committed `.gitmodules`. |
+| Empty recorded Guardian branch | Empty branch in committed `.gitmodules`. |
+| Empty Guardian origin | Successful Guardian Git config query returns an empty URL. |
+
+Packaging validation intentionally supports only the existing seven straight-line
+commands, parameterized by the validated archive name, with blank/comment lines
+ignored. Shell control flow, extra commands and alternative extraction spellings
+fail closed; this is not an arbitrary-shell interpreter. A Bash fixture sources
+the supported script with mocked tar/cp/mkdir/sed commands and asserts the actual
+tar arguments. The same harness proves the dead-code example executes only the
+wrong archive even though Bash returns zero. The fixture archive is deliberately
+not a real Go distribution; these checks do not prove BOSH compilation.
+
+Supplementary CLI coverage includes quoted/flow-style valid YAML, second
+documents in all three YAML inputs, quoted duplicate package keys, malformed or
+non-string `files` values without tracebacks, and missing Git identities (the
+`None`/command-error path). Blob size types and `sha256:` hash format are checked
+before comparison.
+
+### Repair Validation
+
+macOS arm64, Homebrew Python 3.14.7 and Ruby 4.0.7. Commands run from this worktree:
+
+```sh
+python3 -B -m unittest discover -s scripts/tests -p test_verify_provenance.py
+RUBYOPT=-rostruct BUNDLE_FROZEN=true ruby -e 'require "bundler"; def Bundler.local_platform; Gem::Platform.new("arm64-darwin-21"); end; require "bundler/setup"; load Gem.bin_path("rspec-core", "rspec")' -- spec/jobs/garden_spec.rb
+ruby -c scripts/yaml_to_json.rb
+git diff --check
+python3 -B scripts/verify_provenance.py --root "$PWD"
+```
+
+Results: **59 CLI tests passed** (128.539 seconds); **84 RSpec examples, zero
+failures**; Ruby syntax OK; diff whitespace check clean; editor diagnostics clear
+for the three code files. The RSpec run retains the existing Ruby 4 ostruct
+warning and the in-memory Bundler platform override; dependencies and lockfile
+were not changed.
+
+Discriminating old-source control: `git archive 4cc0277b
+scripts/verify_provenance.py` extracted the original verifier into an owned
+temporary directory. The new test module's `VERIFIER` was pointed at that copy,
+and `unittest.TestSuite` selected exactly the eight regression tests above.
+All eight baseline invocations passed, and all eight invalid fixtures incorrectly
+returned exit zero: **8 tests, 8 expected failures, zero errors** (19.537 seconds).
+The harness explicitly required eight `0 != 1` assertion failures, then removed
+the extracted copy. The active worktree verifier was never replaced or mutated.
+
+The real CLI correctly returns exit 1 before commit for dirty release source and
+the missing hydrated Go archive. On the clean committed repair it was rerun:
+exit 1, with the missing archive as the only failure and no dirty-source error.
+Archive hydration, actual release acceptance, native Linux
+packaging and real-runsc CREATED-task validation remain **BLOCKED / NOT RUN** as
+described above; no fixture bytes were placed into the real release. Next check:
+hydrate the exact recorded archive through the approved workflow and rerun the
+read-only CLI on the clean committed source. No live or publication approval is
+implied by these source tests.

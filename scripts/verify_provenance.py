@@ -228,6 +228,35 @@ def read_text(root: Path, relative: str, failures: list[str], description: str) 
         return None
 
 
+def read_yaml(root: Path, relative: str, failures: list[str], description: str) -> dict[str, Any] | None:
+    source = read_text(root, relative, failures, description)
+    if source is None:
+        return None
+    try:
+        result = subprocess.run(
+            ["ruby", str(Path(__file__).with_name("yaml_to_json.rb"))],
+            input=source, capture_output=True, text=True, check=False,
+        )
+        if result.returncode != 0:
+            raise ValueError(result.stderr.strip() or f"Ruby exited {result.returncode}")
+        return json.loads(result.stdout, object_pairs_hook=reject_duplicate_keys)
+    except (OSError, ValueError) as error:
+        failures.append(f"cannot parse {description} at {relative}: {error}")
+        return None
+
+
+def packaging_commands(archive: str) -> list[str]:
+    return [
+        "set -e -x -u",
+        f"tar xzf {archive}",
+        "cp -R go/* ${BOSH_INSTALL_TARGET}",
+        "mkdir ${BOSH_INSTALL_TARGET}/bosh",
+        'export PACKAGE_NAME="$(basename ${BOSH_INSTALL_TARGET})"',
+        r'sed "s#\${PACKAGE_NAME}#${PACKAGE_NAME}#" compile.env.unix > "${BOSH_INSTALL_TARGET}/bosh/compile.env"',
+        r'sed "s#\${PACKAGE_NAME}#${PACKAGE_NAME}#" runtime.env.unix > "${BOSH_INSTALL_TARGET}/bosh/runtime.env"',
+    ]
+
+
 def verify(root: Path, metadata: dict[str, Any]) -> list[str]:
     failures: list[str] = []
     release = metadata["release"]
@@ -240,31 +269,31 @@ def verify(root: Path, metadata: dict[str, Any]) -> list[str]:
             failures.append(f"{label} source has hidden index flags; clear assume-unchanged and skip-worktree")
 
     release_root = git_value(root, failures, "release worktree root", "rev-parse", "--show-toplevel")
-    if release_root and Path(release_root).resolve() != root:
+    if release_root is not None and (not release_root or Path(release_root).resolve() != root):
         failures.append(f"release worktree root is {release_root}, expected {root}")
     release_git_dir = git_value(root, failures, "release Git directory", "rev-parse", "--absolute-git-dir")
     release_remote = git_value(root, failures, "release origin", "config", "--get", "remote.origin.url")
-    if release_remote and release_remote != release["repository"]:
+    if release_remote != release["repository"]:
         failures.append(f"release origin is {release_remote}, expected {release['repository']}")
     release_status = git_value(root, failures, "release source status", "status", "--porcelain", "--untracked-files=all")
     if release_status:
         failures.append("release source is dirty; commit or remove all tracked and untracked changes")
 
-    final_config = read_text(root, release["final_config"], failures, "release final config")
+    final_config = read_yaml(root, release["final_config"], failures, "release final config")
     if final_config is not None:
-        names = re.findall(r"(?m)^final_name:\s*([^\s#]+)\s*$", final_config)
-        if names != [release["name"]]:
-            actual = names[0] if len(names) == 1 else "missing or ambiguous"
+        actual = final_config.get("final_name")
+        if actual != release["name"]:
             failures.append(f"release name is {actual}, expected {release['name']}")
 
-    spec = read_text(root, toolchain["spec"], failures, "Go toolchain package spec")
+    spec = read_yaml(root, toolchain["spec"], failures, "Go toolchain package spec")
     if spec is not None:
-        package_names = re.findall(r"(?m)^name:\s*([^\s#]+)\s*$", spec)
-        if package_names != [toolchain["package"]]:
-            actual = package_names[0] if len(package_names) == 1 else "missing or ambiguous"
+        actual = spec.get("name")
+        if actual != toolchain["package"]:
             failures.append(f"Go toolchain package is {actual}, expected {toolchain['package']}")
-        archives = re.findall(r"(?m)^-\s+(go[^\s#]+\.linux-amd64\.tar\.gz)\s*$", spec)
-        if archives != [toolchain["archive"]]:
+        files = spec.get("files")
+        valid_files = type(files) is list and all(type(entry) is str for entry in files)
+        archives = [entry for entry in files if GO_ARCHIVE.fullmatch(entry)] if valid_files else []
+        if not valid_files or archives != [toolchain["archive"]] or len(files) != len(set(files)):
             failures.append(f"Go toolchain package archive is {archives!r}, expected [{toolchain['archive']!r}]")
 
     expected_version = re.fullmatch(r"go([0-9]+\.[0-9]+\.[0-9]+)\.linux-amd64\.tar\.gz", toolchain["archive"])
@@ -273,24 +302,25 @@ def verify(root: Path, metadata: dict[str, Any]) -> list[str]:
         failures.append(f"Go toolchain version is {version.strip()}, expected {expected_version.group(1)}")
     packaging = read_text(root, toolchain["packaging"], failures, "Go toolchain packaging script")
     if packaging is not None:
-        extraction_commands = re.findall(r"(?m)^tar xzf ([^\s]+)\s*$", packaging)
-        if extraction_commands != [toolchain["archive"]]:
+        commands = [line.strip() for line in packaging.splitlines() if line.strip() and not line.lstrip().startswith("#")]
+        if commands != packaging_commands(toolchain["archive"]):
             failures.append(
-                f"Go toolchain packaging archive is {extraction_commands!r}, expected [{toolchain['archive']!r}]"
+                f"Go toolchain packaging archive is not consumed by the supported straight-line command sequence: {toolchain['archive']}"
             )
 
-    blobs = read_text(root, toolchain["blob_manifest"], failures, "blob manifest")
+    blobs = read_yaml(root, toolchain["blob_manifest"], failures, "blob manifest")
     if blobs is not None:
-        archive = re.escape(toolchain["archive"])
-        block = re.search(
-            rf"(?m)^{archive}:\n  size: ([0-9]+)\n(?:  object_id: [^\n]+\n)?  sha: sha256:([0-9a-f]{{64}})$",
-            blobs,
-        )
-        if not block:
+        block = blobs.get(toolchain["archive"])
+        if (
+            type(block) is not dict
+            or type(block.get("size")) is not int
+            or type(block.get("sha")) is not str
+            or not re.fullmatch(r"sha256:[0-9a-f]{64}", block["sha"])
+        ):
             failures.append(f"Go toolchain archive {toolchain['archive']} is missing or malformed in {toolchain['blob_manifest']}")
         else:
-            actual_size = int(block.group(1))
-            actual_sha = block.group(2)
+            actual_size = block["size"]
+            actual_sha = block["sha"].removeprefix("sha256:")
             if actual_size != toolchain["size"]:
                 failures.append(f"Go toolchain size is {actual_size}, expected {toolchain['size']}")
             if actual_sha != toolchain["sha256"]:
@@ -326,7 +356,7 @@ def verify(root: Path, metadata: dict[str, Any]) -> list[str]:
             "--get",
             f"submodule.{path}.url",
         )
-        if recorded_remote and recorded_remote != guardian_metadata["repository"]:
+        if recorded_remote != guardian_metadata["repository"]:
             failures.append(f"recorded Guardian submodule URL is {recorded_remote}, expected {guardian_metadata['repository']}")
         recorded_branch = git_value(
             root,
@@ -338,7 +368,7 @@ def verify(root: Path, metadata: dict[str, Any]) -> list[str]:
             "--get",
             f"submodule.{path}.branch",
         )
-        if recorded_branch and recorded_branch != guardian_metadata["branch"]:
+        if recorded_branch != guardian_metadata["branch"]:
             failures.append(f"recorded Guardian submodule branch is {recorded_branch}, expected {guardian_metadata['branch']}")
     gitlink = git_value(root, failures, "Guardian gitlink", "ls-tree", "HEAD", "--", path)
     if gitlink is not None:
@@ -382,7 +412,7 @@ def verify(root: Path, metadata: dict[str, Any]) -> list[str]:
     if exists.returncode != 0:
         failures.append(f"declared Guardian revision {revision} does not exist in the initialized repository")
     guardian_head = git_value(guardian, failures, "Guardian HEAD", "rev-parse", "HEAD", ceiling=guardian.parent)
-    if guardian_head and guardian_head != revision:
+    if guardian_head != revision:
         failures.append(f"Guardian HEAD is {guardian_head}, expected {revision}")
     guardian_remote = git_value(
         guardian,
@@ -393,7 +423,7 @@ def verify(root: Path, metadata: dict[str, Any]) -> list[str]:
         "remote.origin.url",
         ceiling=guardian.parent,
     )
-    if guardian_remote and guardian_remote != guardian_metadata["repository"]:
+    if guardian_remote != guardian_metadata["repository"]:
         failures.append(f"Guardian origin is {guardian_remote}, expected {guardian_metadata['repository']}")
 
     guardian_status = git_value(

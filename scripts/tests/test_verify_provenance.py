@@ -21,6 +21,14 @@ CLEANUP_SELECTOR = "deletes a created alternative-runtime task using the require
 FIXTURE_ARCHIVE = b"fixture-go-archive\n"
 FIXTURE_ARCHIVE_SIZE = 19
 FIXTURE_ARCHIVE_SHA = "cb9f4682c40eafd858310d12b3fd7d1ecec19f2387fb28e4c181f0fa9c3b98f4"
+FIXTURE_PACKAGING = '''set -e -x -u
+tar xzf go1.26.3.linux-amd64.tar.gz
+cp -R go/* ${BOSH_INSTALL_TARGET}
+mkdir ${BOSH_INSTALL_TARGET}/bosh
+export PACKAGE_NAME="$(basename ${BOSH_INSTALL_TARGET})"
+sed "s#\\${PACKAGE_NAME}#${PACKAGE_NAME}#" compile.env.unix > "${BOSH_INSTALL_TARGET}/bosh/compile.env"
+sed "s#\\${PACKAGE_NAME}#${PACKAGE_NAME}#" runtime.env.unix > "${BOSH_INSTALL_TARGET}/bosh/runtime.env"
+'''
 
 
 def git(root: Path, *args: str) -> str:
@@ -90,7 +98,7 @@ class Fixture:
             "---\nname: golang-1.26-linux\nfiles:\n- go1.26.3.linux-amd64.tar.gz\n",
         )
         write(self.root / "packages/golang-1.26-linux/version", "1.26.3\n")
-        write(self.root / "packages/golang-1.26-linux/packaging", "tar xzf go1.26.3.linux-amd64.tar.gz\n")
+        write(self.root / "packages/golang-1.26-linux/packaging", FIXTURE_PACKAGING)
         self.archive = self.root / "blobs/go1.26.3.linux-amd64.tar.gz"
         self.archive.parent.mkdir(parents=True)
         self.archive.write_bytes(FIXTURE_ARCHIVE)
@@ -231,6 +239,140 @@ class VerifyProvenanceTest(unittest.TestCase):
         self.assert_result(0, "Verified release-local contract consistency")
         self.assertEqual(self.fixture.source_snapshot(), before)
         self.assertEqual(git(self.fixture.root, "status", "--porcelain", "--untracked-files=all"), status_before)
+
+    def test_duplicate_quoted_final_name_is_rejected(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        write(self.fixture.root / "config/final.yml", 'final_name: garden-runc\n"final_name": wrong\n')
+        self.fixture.commit_release()
+        self.assert_result(1, "duplicate YAML key: final_name")
+
+    def test_archive_in_unused_package_field_is_rejected(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        write(
+            self.fixture.root / "packages/golang-1.26-linux/spec",
+            "name: golang-1.26-linux\nfiles:\n- wrong.tar.gz\nunused:\n- go1.26.3.linux-amd64.tar.gz\n",
+        )
+        self.fixture.commit_release()
+        self.assert_result(1, "Go toolchain package archive is []")
+
+    def test_duplicate_blob_archive_is_rejected(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        blobs = self.fixture.root / "config/blobs.yml"
+        write(blobs, blobs.read_text() + '"go1.26.3.linux-amd64.tar.gz":\n  size: 1\n  sha: sha256:' + "0" * 64 + "\n")
+        self.fixture.commit_release()
+        self.assert_result(1, "duplicate YAML key: go1.26.3.linux-amd64.tar.gz")
+
+    def test_dead_extraction_is_rejected_and_bash_mock_proves_executed_archive(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        packaging = self.fixture.root / "packages/golang-1.26-linux/packaging"
+        install = self.fixture.root.parent / "install"
+        (install / "bosh").mkdir(parents=True)
+        env = self.fixture.verifier_env.copy()
+        env["BOSH_INSTALL_TARGET"] = str(install)
+        mock = '''tar() { printf '%s\\n' "$@"; }
+cp() { :; }
+mkdir() { :; }
+sed() { :; }
+source "$1"
+'''
+        control = subprocess.run(
+            ["bash", "-c", mock, "packaging-mock", str(packaging)],
+            env=env, capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(control.returncode, 0, control.stderr)
+        self.assertEqual(control.stdout.splitlines(), ["xzf", "go1.26.3.linux-amd64.tar.gz"])
+        write(
+            packaging,
+            "if false; then\ntar xzf go1.26.3.linux-amd64.tar.gz\nfi\ntar -xzf wrong.tar.gz\n",
+        )
+        self.fixture.commit_release()
+        self.assert_result(1, "supported straight-line command sequence")
+        invalid = subprocess.run(
+            ["bash", "-c", mock, "packaging-mock", str(packaging)],
+            env=env, capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(invalid.returncode, 0, invalid.stderr)
+        self.assertEqual(invalid.stdout.splitlines(), ["-xzf", "wrong.tar.gz"])
+
+    def test_empty_release_origin_is_rejected(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        git(self.fixture.root, "config", "remote.origin.url", "")
+        self.assert_result(1, "release origin is , expected")
+
+    def test_empty_recorded_guardian_url_is_rejected(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        git(self.fixture.root, "config", "-f", ".gitmodules", "submodule.src/guardian.url", "")
+        self.fixture.commit_release()
+        self.assert_result(1, "recorded Guardian submodule URL is , expected")
+
+    def test_empty_recorded_guardian_branch_is_rejected(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        git(self.fixture.root, "config", "-f", ".gitmodules", "submodule.src/guardian.branch", "")
+        self.fixture.commit_release()
+        self.assert_result(1, "recorded Guardian submodule branch is , expected")
+
+    def test_empty_guardian_origin_is_rejected(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        git(self.fixture.guardian, "config", "remote.origin.url", "")
+        self.assert_result(1, "Guardian origin is , expected")
+
+    def test_quoted_yaml_values_are_parsed_like_ruby(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        write(self.fixture.root / "config/final.yml", '"final_name": "garden-runc"\n')
+        write(
+            self.fixture.root / "packages/golang-1.26-linux/spec",
+            '"name": "golang-1.26-linux"\n"files": ["go1.26.3.linux-amd64.tar.gz"]\n',
+        )
+        write(
+            self.fixture.root / "config/blobs.yml",
+            f'"go1.26.3.linux-amd64.tar.gz": {{size: {FIXTURE_ARCHIVE_SIZE}, sha: "sha256:{FIXTURE_ARCHIVE_SHA}"}}\n',
+        )
+        self.fixture.commit_release()
+        self.assert_result(0, "Verified release-local contract consistency")
+
+    def test_multiple_yaml_documents_are_rejected_for_each_input(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        for relative in ("config/final.yml", "packages/golang-1.26-linux/spec", "config/blobs.yml"):
+            with self.subTest(relative=relative):
+                path = self.fixture.root / relative
+                original = path.read_text()
+                write(path, original + "---\nignored: wrong\n")
+                self.fixture.commit_release()
+                self.assert_result(1, "expected exactly one YAML document")
+                write(path, original)
+                self.fixture.commit_release("restore valid YAML")
+
+    def test_duplicate_quoted_package_files_is_rejected(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        spec = self.fixture.root / "packages/golang-1.26-linux/spec"
+        write(spec, spec.read_text() + '"files": [wrong.tar.gz]\n')
+        self.fixture.commit_release()
+        self.assert_result(1, "duplicate YAML key: files")
+
+    def test_malformed_yaml_and_files_fail_without_traceback(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        spec = self.fixture.root / "packages/golang-1.26-linux/spec"
+        for files in ("[", "null", "{}", "[go1.26.3.linux-amd64.tar.gz, {}]", "[go1.26.3.linux-amd64.tar.gz, false]"):
+            with self.subTest(files=files):
+                write(spec, f"name: golang-1.26-linux\nfiles: {files}\n")
+                self.fixture.commit_release()
+                result = self.assert_result(1, "provenance verification failed")
+                self.assertNotIn("Traceback", result.stderr)
+
+    def test_missing_git_identities_fail_closed_on_none(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        git(self.fixture.root, "config", "--unset", "remote.origin.url")
+        git(self.fixture.guardian, "config", "--unset", "remote.origin.url")
+        git(self.fixture.root, "config", "-f", ".gitmodules", "--unset", "submodule.src/guardian.url")
+        git(self.fixture.root, "config", "-f", ".gitmodules", "--unset", "submodule.src/guardian.branch")
+        self.fixture.commit_release()
+        result = self.assert_result(1, "cannot determine release origin")
+        for diagnostic in (
+            "cannot determine Guardian origin",
+            "cannot determine recorded Guardian submodule URL",
+            "cannot determine recorded Guardian submodule branch",
+        ):
+            self.assertIn(diagnostic, result.stderr)
 
     def test_malformed_metadata(self) -> None:
         write(self.fixture.root / "PROVENANCE.json", "{\n")
