@@ -353,8 +353,12 @@ describe 'garden' do
         expect(rendered['store']).to eql('/var/vcap/data/grootfs/store/unprivileged')
       end
 
-      it 'defaults exclude_image_from_quota to false' do
-        expect(rendered['exclude_image_from_quota']).to eql(false)
+      it 'defaults exclude_image_from_quota to false under create' do
+        expect(rendered['create']['exclude_image_from_quota']).to eql(false)
+      end
+
+      it 'does not set exclude_image_from_quota at top level' do
+        expect(rendered.key?('exclude_image_from_quota')).to eql(false)
       end
 
       it 'renders metron_endpoint from the default dropsonde_port' do
@@ -372,16 +376,19 @@ describe 'garden' do
       }
       let(:rendered) { YAML.safe_load(grootfs_template.render(properties)) }
 
-      it 'sets exclude_image_from_quota to true' do
-        expect(rendered['exclude_image_from_quota']).to eql(true)
+      it 'sets exclude_image_from_quota to true under create' do
+        expect(rendered['create']['exclude_image_from_quota']).to eql(true)
+      end
+
+      it 'does not set exclude_image_from_quota at top level' do
+        expect(rendered.key?('exclude_image_from_quota')).to eql(false)
       end
 
       it 'preserves the store path' do
         expect(rendered['store']).to eql('/var/vcap/data/grootfs/store/unprivileged')
       end
 
-      it 'preserves the create section' do
-        expect(rendered['create']).to be_a(Hash)
+      it 'preserves other create section fields' do
         expect(rendered['create']['skip_layer_validation']).to eql(true)
       end
     end
@@ -396,8 +403,8 @@ describe 'garden' do
       }
       let(:rendered) { YAML.safe_load(grootfs_template.render(properties)) }
 
-      it 'sets exclude_image_from_quota to false' do
-        expect(rendered['exclude_image_from_quota']).to eql(false)
+      it 'sets exclude_image_from_quota to false under create' do
+        expect(rendered['create']['exclude_image_from_quota']).to eql(false)
       end
     end
   end
@@ -412,8 +419,12 @@ describe 'garden' do
         expect(rendered['store']).to eql('/var/vcap/data/grootfs/store/privileged')
       end
 
-      it 'defaults exclude_image_from_quota to false' do
-        expect(rendered['exclude_image_from_quota']).to eql(false)
+      it 'defaults exclude_image_from_quota to false under create' do
+        expect(rendered['create']['exclude_image_from_quota']).to eql(false)
+      end
+
+      it 'does not set exclude_image_from_quota at top level' do
+        expect(rendered.key?('exclude_image_from_quota')).to eql(false)
       end
     end
 
@@ -427,8 +438,8 @@ describe 'garden' do
       }
       let(:rendered) { YAML.safe_load(priv_template.render(properties)) }
 
-      it 'sets exclude_image_from_quota to true' do
-        expect(rendered['exclude_image_from_quota']).to eql(true)
+      it 'sets exclude_image_from_quota to true under create' do
+        expect(rendered['create']['exclude_image_from_quota']).to eql(true)
       end
 
       it 'preserves the privileged store path' do
