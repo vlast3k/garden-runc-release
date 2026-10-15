@@ -315,6 +315,10 @@ properties:
     description: "Enable the DIRECT_IO flag on the loop device associated with the GrootFS store. This should reduce memory and processing overheads by eliminating double caching of the store filesystem"
     default: false
 
+  grootfs.exclude_image_from_quota:
+    description: "Boolean. When true, globally exclude base-image bytes from disk quotas for both privileged and unprivileged GrootFS stores, even for Garden total-scope requests. Positive writable-layer quotas still apply. When false (default), preserve stock accounting: total scope includes the image, while a per-request exclusive scope can still exclude it. This is an explicit cell-wide accounting policy, not a runtime requirement or per-request override; custom image plugins may ignore it."
+    default: false
+
   bpm.enabled:
     description: "Use bpm. NOTE: this requires a recreate when enabling for the first time, otherwise old containers may be left running. NOTE: When this property is enabled, containers won't survive a restart of the garden job. This is why garden.destroy_containers_on_start should be set to avoid leaking container state."
     default: false

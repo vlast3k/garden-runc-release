@@ -11,6 +11,30 @@ describe 'garden' do
   let(:template) { job.template('config/config.ini') }
   let(:properties) {{}}
 
+  ['config/grootfs_config.yml', 'config/privileged_grootfs_config.yml'].each do |config_path|
+    describe "#{config_path} quota property validation" do
+      [0, 1, [], {}, 'true', 'false', 'yes', 'not-a-bool', "true\n  disk_limit_size_bytes: 0"].each do |value|
+        it "rejects non-Boolean #{value.inspect}" do
+          expect {
+            job.template(config_path).render({'grootfs' => {'exclude_image_from_quota' => value}})
+          }.to raise_error(/grootfs.exclude_image_from_quota must be a Boolean/)
+        end
+      end
+
+      it 'uses the BOSH default for a null property' do
+        rendered = YAML.safe_load(job.template(config_path).render({'grootfs' => {'exclude_image_from_quota' => nil}}))
+        expect(rendered.fetch('create').fetch('exclude_image_from_quota')).to eql(false)
+      end
+
+      [false, true].each do |value|
+        it "renders native Boolean #{value}" do
+          rendered = YAML.safe_load(job.template(config_path).render({'grootfs' => {'exclude_image_from_quota' => value}}))
+          expect(rendered.fetch('create').fetch('exclude_image_from_quota')).to eql(value)
+        end
+      end
+    end
+  end
+
   context 'config/config.ini' do
     context 'with defaults' do
       let(:rendered_template) { IniParse.parse(template.render(properties)) }
@@ -340,6 +364,111 @@ describe 'garden' do
         
       #   expect {template.render(properties)}.to raise_error(IPAddr::InvalidAddressError)
       # end
+    end
+  end
+
+  context 'config/grootfs_config.yml' do
+    let(:grootfs_template) { job.template('config/grootfs_config.yml') }
+
+    context 'with defaults' do
+      let(:rendered) { YAML.safe_load(grootfs_template.render(properties)) }
+
+      it 'sets the unprivileged store path' do
+        expect(rendered['store']).to eql('/var/vcap/data/grootfs/store/unprivileged')
+      end
+
+      it 'defaults exclude_image_from_quota to false under create' do
+        expect(rendered['create']['exclude_image_from_quota']).to eql(false)
+      end
+
+      it 'does not set exclude_image_from_quota at top level' do
+        expect(rendered.key?('exclude_image_from_quota')).to eql(false)
+      end
+
+      it 'renders metron_endpoint from the default dropsonde_port' do
+        expect(rendered['metron_endpoint']).to eql('127.0.0.1:3457')
+      end
+    end
+
+    context 'when grootfs.exclude_image_from_quota is true' do
+      let(:properties) {
+        {
+          'grootfs' => {
+            'exclude_image_from_quota' => true,
+          }
+        }
+      }
+      let(:rendered) { YAML.safe_load(grootfs_template.render(properties)) }
+
+      it 'sets exclude_image_from_quota to true under create' do
+        expect(rendered['create']['exclude_image_from_quota']).to eql(true)
+      end
+
+      it 'does not set exclude_image_from_quota at top level' do
+        expect(rendered.key?('exclude_image_from_quota')).to eql(false)
+      end
+
+      it 'preserves the store path' do
+        expect(rendered['store']).to eql('/var/vcap/data/grootfs/store/unprivileged')
+      end
+
+      it 'preserves other create section fields' do
+        expect(rendered['create']['skip_layer_validation']).to eql(true)
+      end
+    end
+
+    context 'when grootfs.exclude_image_from_quota is explicitly false' do
+      let(:properties) {
+        {
+          'grootfs' => {
+            'exclude_image_from_quota' => false,
+          }
+        }
+      }
+      let(:rendered) { YAML.safe_load(grootfs_template.render(properties)) }
+
+      it 'sets exclude_image_from_quota to false under create' do
+        expect(rendered['create']['exclude_image_from_quota']).to eql(false)
+      end
+    end
+  end
+
+  context 'config/privileged_grootfs_config.yml' do
+    let(:priv_template) { job.template('config/privileged_grootfs_config.yml') }
+
+    context 'with defaults' do
+      let(:rendered) { YAML.safe_load(priv_template.render(properties)) }
+
+      it 'sets the privileged store path' do
+        expect(rendered['store']).to eql('/var/vcap/data/grootfs/store/privileged')
+      end
+
+      it 'defaults exclude_image_from_quota to false under create' do
+        expect(rendered['create']['exclude_image_from_quota']).to eql(false)
+      end
+
+      it 'does not set exclude_image_from_quota at top level' do
+        expect(rendered.key?('exclude_image_from_quota')).to eql(false)
+      end
+    end
+
+    context 'when grootfs.exclude_image_from_quota is true' do
+      let(:properties) {
+        {
+          'grootfs' => {
+            'exclude_image_from_quota' => true,
+          }
+        }
+      }
+      let(:rendered) { YAML.safe_load(priv_template.render(properties)) }
+
+      it 'sets exclude_image_from_quota to true under create' do
+        expect(rendered['create']['exclude_image_from_quota']).to eql(true)
+      end
+
+      it 'preserves the privileged store path' do
+        expect(rendered['store']).to eql('/var/vcap/data/grootfs/store/privileged')
+      end
     end
   end
 end
