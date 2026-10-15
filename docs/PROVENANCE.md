@@ -16,6 +16,21 @@ hydrated Go archive must be a regular non-symlink file below the approved `blobs
 root and match the recorded size and SHA-256. Initialize Guardian with
 `git submodule update --init src/guardian`.
 
+Go packaging has a deliberately limited format, not a general shell grammar:
+only printable ASCII bytes plus TAB and LF are accepted, including in comments.
+Lines split only on LF; only leading/trailing ASCII spaces and tabs are stripped.
+Blank lines and full-line comments are ignored. The remaining seven commands must
+match `packaging_commands` exactly, including internal whitespace and extraction
+spelling. CR/CRLF, other control bytes, Unicode, continuations, control flow and
+alternate command spellings are rejected rather than normalized or interpreted.
+
+YAML inputs require one mapping document. Before constructing hashes, the Psych
+helper rejects explicit tags other than string tags, resolves implicit scalar
+keys, requires string keys and rejects decoded duplicate keys at every depth.
+Quoted and explicitly tagged strings remain supported; binary, boolean and integer
+tags cannot disguise keys or values. Implicit integer values such as blob sizes
+remain supported. Merge keys, aliases and permitted object classes are not enabled.
+
 The Garden and Guardian repository URLs and Guardian `main` branch are fixed
 allowlist values, not metadata-selected trust roots. The command is offline and
 read-only: it neither fetches nor queries a live branch, runs behavior tests, or

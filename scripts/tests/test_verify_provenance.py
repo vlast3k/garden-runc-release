@@ -299,6 +299,81 @@ source "$1"
         git(self.fixture.root, "config", "remote.origin.url", "")
         self.assert_result(1, "release origin is , expected")
 
+    def test_vt_commented_extraction_is_rejected_with_zero_bash_tar_calls(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        packaging = self.fixture.root / "packages/golang-1.26-linux/packaging"
+        install = self.fixture.root.parent / "install"
+        (install / "bosh").mkdir(parents=True)
+        env = self.fixture.verifier_env.copy()
+        env["BOSH_INSTALL_TARGET"] = str(install)
+        mock = '''tar() { printf '%s\\n' "$@"; }
+cp() { :; }
+mkdir() { :; }
+sed() { :; }
+source "$1"
+'''
+        control = subprocess.run(
+            ["bash", "-c", mock, "packaging-mock", str(packaging)],
+            env=env, capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(control.returncode, 0, control.stderr)
+        self.assertEqual(control.stdout.splitlines(), ["xzf", "go1.26.3.linux-amd64.tar.gz"])
+        write(packaging, FIXTURE_PACKAGING.replace("\ntar xzf", "\n#\vtar xzf"))
+        self.fixture.commit_release()
+        invalid = subprocess.run(
+            ["bash", "-c", mock, "packaging-mock", str(packaging)],
+            env=env, capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(invalid.returncode, 0, invalid.stderr)
+        self.assertEqual(invalid.stdout, "", "Bash must execute zero tar calls")
+        self.assert_result(1, "unsupported packaging character")
+
+    def test_packaging_rejects_control_and_non_ascii_characters(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        packaging = self.fixture.root / "packages/golang-1.26-linux/packaging"
+        for character in ("\x00", "\v", "\f", "\r", "\x1c", "\x7f", "\x85", "\u00a0", "\u2028", "\u2029"):
+            with self.subTest(character=repr(character)):
+                packaging.write_bytes((FIXTURE_PACKAGING + "#" + character + "comment\n").encode("utf-8"))
+                self.fixture.commit_release()
+                self.assert_result(1, "unsupported packaging character")
+
+    def test_packaging_accepts_only_space_tab_margins_and_lf_comments(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        packaging = self.fixture.root / "packages/golang-1.26-linux/packaging"
+        write(packaging, "#!/bin/bash\n \t\n\t# comment\n" + "".join(
+            " \t" + line + "\t \n" for line in FIXTURE_PACKAGING.split("\n") if line
+        ))
+        self.fixture.commit_release()
+        self.assert_result(0, "Verified release-local contract consistency")
+
+    def test_yaml_tagged_key_collisions_are_rejected_before_construction(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        final = self.fixture.root / "config/final.yml"
+        for source, diagnostic in (
+            ("final_name: wrong\n!!binary ZmluYWxfbmFtZQ==: garden-runc\n", "unsupported YAML tag"),
+            ("final_name: garden-runc\ntrue: wrong\n!!str true: hidden\n", "YAML mapping keys must be strings"),
+            ("final_name: garden-runc\n1: wrong\n!!str 1: hidden\n", "YAML mapping keys must be strings"),
+        ):
+            with self.subTest(source=source):
+                write(final, source)
+                self.fixture.commit_release()
+                self.assert_result(1, diagnostic)
+
+    def test_yaml_non_string_scalar_tags_are_rejected(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        final = self.fixture.root / "config/final.yml"
+        for tagged in ("!!binary Z2FyZGVuLXJ1bmM=", "!!bool garden-runc", "!!int garden-runc"):
+            with self.subTest(tagged=tagged):
+                write(final, f"final_name: {tagged}\n")
+                self.fixture.commit_release()
+                self.assert_result(1, "unsupported YAML tag")
+
+    def test_explicit_string_escaped_duplicate_yaml_key_is_rejected(self) -> None:
+        self.assert_result(0, "Verified release-local contract consistency")
+        write(self.fixture.root / "config/final.yml", 'final_name: wrong\n!!str "final_\\u006eame": garden-runc\n')
+        self.fixture.commit_release()
+        self.assert_result(1, "duplicate YAML key: final_name")
+
     def test_empty_recorded_guardian_url_is_rejected(self) -> None:
         self.assert_result(0, "Verified release-local contract consistency")
         git(self.fixture.root, "config", "-f", ".gitmodules", "submodule.src/guardian.url", "")

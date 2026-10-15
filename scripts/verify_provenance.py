@@ -222,7 +222,7 @@ def safe_repository_file(root: Path, relative: str) -> Path:
 
 def read_text(root: Path, relative: str, failures: list[str], description: str) -> str | None:
     try:
-        return safe_repository_file(root, relative).read_text(encoding="utf-8")
+        return safe_repository_file(root, relative).read_bytes().decode("utf-8")
     except (OSError, UnicodeError) as error:
         failures.append(f"cannot read {description} at {relative}: {error}")
         return None
@@ -302,11 +302,15 @@ def verify(root: Path, metadata: dict[str, Any]) -> list[str]:
         failures.append(f"Go toolchain version is {version.strip()}, expected {expected_version.group(1)}")
     packaging = read_text(root, toolchain["packaging"], failures, "Go toolchain packaging script")
     if packaging is not None:
-        commands = [line.strip() for line in packaging.splitlines() if line.strip() and not line.lstrip().startswith("#")]
-        if commands != packaging_commands(toolchain["archive"]):
-            failures.append(
-                f"Go toolchain packaging archive is not consumed by the supported straight-line command sequence: {toolchain['archive']}"
-            )
+        if any(character not in "\t\n" and not " " <= character <= "~" for character in packaging):
+            failures.append("Go toolchain packaging script contains an unsupported packaging character; only printable ASCII, TAB and LF are allowed")
+        else:
+            lines = [line.strip(" \t") for line in packaging.split("\n")]
+            commands = [line for line in lines if line and not line.startswith("#")]
+            if commands != packaging_commands(toolchain["archive"]):
+                failures.append(
+                    f"Go toolchain packaging archive is not consumed by the supported straight-line command sequence: {toolchain['archive']}"
+                )
 
     blobs = read_yaml(root, toolchain["blob_manifest"], failures, "blob manifest")
     if blobs is not None:

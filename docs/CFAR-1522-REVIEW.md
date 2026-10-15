@@ -227,3 +227,75 @@ described above; no fixture bytes were placed into the real release. Next check:
 hydrate the exact recorded archive through the approved workflow and rerun the
 read-only CLI on the clean committed source. No live or publication approval is
 implied by these source tests.
+
+## Second Review Repair
+
+Observation date: 2026-10-15. Garden-only repair from clean local commit
+`29ec8a4c958447dfd7af041e246ffe6710a9cb76` on the existing branch. The resulting
+revision is the local commit containing this section. No push, merge, parent pin
+edit, runtime/Guardian edit, Jira write, artifact hydration or live operation was
+performed. This section supersedes the preceding 59-test count.
+
+Hypothesis and first check: Python's Unicode line splitting and whitespace
+normalization can turn a Bash comment into an apparent extraction command; raw
+YAML AST key spellings can differ from the keys Psych constructs. Add actual CLI
+regressions first, with clean committed invalid fixtures and valid controls, then
+run the narrow selection against unchanged source before repairing it.
+
+The pre-fix run selected four new test methods: **4 tests, 7 failing assertions,
+zero errors**. Five invalid inputs falsely returned CLI exit zero: VT-commented
+extraction, binary-key overwrite, and binary/bool/int tagged release-name values.
+Two more assertions exposed the old raw-duplicate diagnostic for boolean/integer
+keys rather than rejection of their non-string types. The explicit-string escaped
+duplicate test already passed and is retained as a positive rejection control.
+The Bash witness passed before the CLI rejection assertion: the unmodified script
+called mocked tar with the exact expected archive; after replacing its extraction
+with literal `#\vtar xzf ...`, Bash returned zero and observed **zero tar calls**.
+
+Changes are restricted to:
+
+- `scripts/verify_provenance.py`: preserve decoded source bytes without universal
+	newline translation; reject every packaging character except printable ASCII,
+	TAB and LF, split only on LF, trim only space/tab margins, and compare the
+	existing seven-command sequence exactly. No generic shell parser was added.
+- `scripts/yaml_to_json.rb`: reject non-string explicit tags before construction,
+	use Psych's restricted scalar scanner for implicit key types, require string
+	keys, and compare decoded key values for duplicates before safe loading.
+	The requested runtime `load_yaml.rb` reference was not present in the available
+	runtime checkout (including tracked filename discovery); this implements the
+	requested semantics directly, not a claimed source copy. Runtime is untouched.
+- `scripts/tests/test_verify_provenance.py`: six new CLI test methods covering
+	the Bash/VT witness, control/non-ASCII characters (including CR before it can be
+	normalized), accepted ASCII margins/comments, binary/bool/int key collisions
+	and tags, and explicit-string Unicode-escaped duplicate keys. Every verifier
+	invocation retains the source/Git snapshot immutability assertion.
+- `docs/PROVENANCE.md` and this report: explicit limited-format contract and
+	reproducible validation evidence.
+
+### Second Repair Validation
+
+macOS arm64, Homebrew Python 3.14.7 and Ruby 4.0.7. Commands from this worktree:
+
+```sh
+PATH=/opt/homebrew/bin:$PATH python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'
+PATH=/opt/homebrew/bin:$PATH RUBYOPT=-rostruct BUNDLE_FROZEN=true ruby -e 'require "bundler"; def Bundler.local_platform; Gem::Platform.new("arm64-darwin-21"); end; require "bundler/setup"; load Gem.bin_path("rspec-core", "rspec")' -- spec/jobs/garden_spec.rb
+PATH=/opt/homebrew/bin:$PATH ruby -c scripts/yaml_to_json.rb
+git diff --check
+```
+
+Results: **65 CLI tests passed** (166.898 seconds in the owned iTerm session,
+explicit `__GARDEN_ALL_TESTS_RC=0__` and dispatch exit-zero markers); the immediate
+six-method focused rerun passed in 31.003 seconds. **84 RSpec examples, zero
+failures**; Ruby syntax OK; whitespace and editor diagnostics clean. The existing
+Ruby 4 ostruct warning and in-memory frozen-Bundler platform override are unchanged.
+An earlier shared-terminal full-suite attempt was interrupted by concurrent
+terminal reuse and is not counted as a passing run. The iTerm operation API did
+not confirm completion; its completed summary and exit markers were recovered
+once from owned-session scrollback rather than inferred from stability.
+
+These are source-contract and render tests, not native Linux packaging or runtime
+acceptance. The real release still lacks the hydrated Go archive. That gate
+remains **BLOCKED**, and matched runsc/shim CREATED-task validation remains
+**NOT RUN**. The next discriminating check remains approved hydration of the exact
+recorded archive and the read-only CLI on clean committed source; no acceptance
+gate was waived by this repair.
