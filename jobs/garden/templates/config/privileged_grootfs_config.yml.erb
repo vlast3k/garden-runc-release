@@ -1,3 +1,9 @@
+<%
+exclude_image_from_quota = p("grootfs.exclude_image_from_quota")
+unless exclude_image_from_quota == true || exclude_image_from_quota == false
+  raise "grootfs.exclude_image_from_quota must be a Boolean"
+end
+-%>
 store: /var/vcap/data/grootfs/store/privileged
 tardis_bin: /var/vcap/packages/grootfs/bin/tardis
 newuidmap_bin: /var/vcap/packages/garden-idmapper/bin/newuidmap
@@ -7,7 +13,7 @@ log_level: <%= p('grootfs.log_level') %>
 metron_endpoint: 127.0.0.1:<%= dropsonde_port %>
 <% end %>
 create:
-  exclude_image_from_quota: <%= p("grootfs.exclude_image_from_quota") %>
+  exclude_image_from_quota: <%= exclude_image_from_quota %>
   without_mount: <%= p("grootfs.skip_mount") %>
   insecure_registries: <%= p("garden.insecure_docker_registry_list").any? ? p("garden.insecure_docker_registry_list") : p("grootfs.insecure_docker_registry_list") %>
   skip_layer_validation: true

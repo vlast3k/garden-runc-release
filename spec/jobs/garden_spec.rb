@@ -11,6 +11,30 @@ describe 'garden' do
   let(:template) { job.template('config/config.ini') }
   let(:properties) {{}}
 
+  ['config/grootfs_config.yml', 'config/privileged_grootfs_config.yml'].each do |config_path|
+    describe "#{config_path} quota property validation" do
+      [0, 1, [], {}, 'true', 'false', 'yes', 'not-a-bool', "true\n  disk_limit_size_bytes: 0"].each do |value|
+        it "rejects non-Boolean #{value.inspect}" do
+          expect {
+            job.template(config_path).render({'grootfs' => {'exclude_image_from_quota' => value}})
+          }.to raise_error(/grootfs.exclude_image_from_quota must be a Boolean/)
+        end
+      end
+
+      it 'uses the BOSH default for a null property' do
+        rendered = YAML.safe_load(job.template(config_path).render({'grootfs' => {'exclude_image_from_quota' => nil}}))
+        expect(rendered.fetch('create').fetch('exclude_image_from_quota')).to eql(false)
+      end
+
+      [false, true].each do |value|
+        it "renders native Boolean #{value}" do
+          rendered = YAML.safe_load(job.template(config_path).render({'grootfs' => {'exclude_image_from_quota' => value}}))
+          expect(rendered.fetch('create').fetch('exclude_image_from_quota')).to eql(value)
+        end
+      end
+    end
+  end
+
   context 'config/config.ini' do
     context 'with defaults' do
       let(:rendered_template) { IniParse.parse(template.render(properties)) }

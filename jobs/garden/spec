@@ -316,7 +316,7 @@ properties:
     default: false
 
   grootfs.exclude_image_from_quota:
-    description: "When true, the base filesystem image (rootfs) is not counted against the container disk_quota. Required for alternative runtimes where the rootfs exceeds the default container quota (e.g. cflinuxfs4 at ~1.4 GB under gVisor). When false (default), the rootfs counts toward disk_quota — the stock Garden/runc behavior."
+    description: "Boolean. When true, globally exclude base-image bytes from disk quotas for both privileged and unprivileged GrootFS stores, even for Garden total-scope requests. Positive writable-layer quotas still apply. When false (default), preserve stock accounting: total scope includes the image, while a per-request exclusive scope can still exclude it. This is an explicit cell-wide accounting policy, not a runtime requirement or per-request override; custom image plugins may ignore it."
     default: false
 
   bpm.enabled:
