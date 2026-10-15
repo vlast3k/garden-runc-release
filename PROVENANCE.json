@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "release": {
+    "name": "garden-runc",
+    "repository": "https://github.tools.sap/cp-runtime/garden-runc-release.git",
+    "final_config": "config/final.yml"
+  },
+  "toolchain": {
+    "package": "golang-1.26-linux",
+    "spec": "packages/golang-1.26-linux/spec",
+    "version_file": "packages/golang-1.26-linux/version",
+    "packaging": "packages/golang-1.26-linux/packaging",
+    "archive": "go1.26.3.linux-amd64.tar.gz",
+    "blob_manifest": "config/blobs.yml",
+    "blob_root": "blobs",
+    "size": 66862230,
+    "sha256": "2b2cfc7148493da5e73981bffbf3353af381d5f93e789c82c79aff64962eb556"
+  },
+  "guardian": {
+    "path": "src/guardian",
+    "revision": "2f4941f8ed804d966c6962075b2a84d74a4f88c9",
+    "repository": "https://github.tools.sap/cp-runtime/guardian.git",
+    "branch": "main"
+  },
+  "downstream_patches": [
+    {
+      "id": "guardian-created-task-cleanup",
+      "owner": "guardian",
+      "revision": "186b414477c98ed9fab5707a9a8c79d8e55ae80b",
+      "status": "required",
+      "application_check": "Review the exact Guardian gitlink and HEAD; the patch revision is a source reference, not an ancestry or behavior proof. Run the anchored tests to establish behavior.",
+      "test_anchors": [
+        {
+          "kind": "unit",
+          "path": "rundmc/runcontainerd/nerd/nerd_linux_test.go",
+          "selector": "deletes a created alternative-runtime task using the required shim cleanup"
+        }
+      ]
+    }
+  ],
+  "behavior_gates": [
+    {
+      "id": "guardian-created-task-cleanup",
+      "owner": "guardian",
+      "status": "required",
+      "test_anchors": [
+        {
+          "kind": "unit",
+          "path": "rundmc/runcontainerd/nerd/nerd_linux_test.go",
+          "selector": "deletes a created alternative-runtime task using the required shim cleanup"
+        }
+      ],
+      "limitation": "NOT RUN: matching runsc/shim binaries are unavailable. The anchors identify executable gates; metadata and source marker presence do not prove that the tests ran. Stock Nerd 47 passing specs are not runsc proof. Keep cleanup7 until its lifecycle replacement gate passes."
+    }
+  ]
+}
