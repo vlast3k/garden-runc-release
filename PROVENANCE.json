@@ -18,7 +18,7 @@
   },
   "guardian": {
     "path": "src/guardian",
-    "revision": "2f4941f8ed804d966c6962075b2a84d74a4f88c9",
+    "revision": "1b186bea3bfbee16970de1727f0f896c9077abbc",
     "repository": "https://github.tools.sap/cp-runtime/guardian.git",
     "branch": "main"
   },
