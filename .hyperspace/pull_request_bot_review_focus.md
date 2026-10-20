@@ -64,6 +64,12 @@ or a clear; do not equate an absent finding or a PASS total with proof.
    reason, with a passing baseline in the same environment. An unrelated fixture
    failure in both baseline and mutant does not kill the mutation. A control
    accepting both outcomes is not discriminating.
+   State a concrete counterexample: what plausible broken implementation could
+   still pass this check? Inspect the complete predicate, producer outcome and
+   nearby copies in the changed scope in the same pass. Do not stop at the first
+   missing assertion when its obvious repair leaves the same defect undetected.
+   A suggested mutation is unexecuted unless retained execution evidence exists;
+   do not claim it passed or failed from source reasoning alone.
 3. **Predicates and external semantics:** Inspect raw output, stderr, exit status
    and postconditions together. Zero exit, HTTP 200 or elapsed time alone can
    hide failure. An expected rejection or deliberate timeout can correctly be
@@ -80,6 +86,15 @@ or a clear; do not equate an absent finding or a PASS total with proof.
    or relying on watchdog cleanup does not prove implementation cleanup.
    Deliberate watchdog termination may be correct for a broken negative control;
    do not reject that expected result or accept it for the normal positive case.
+   Include blocking setup, initial reads and Close/Wait calls in the declared
+   deadline; a timer started after a blocking operation does not bound it.
+   For residue claims, identify the resources and their termination observations:
+   producer completion, process Wait, stream-worker exit, connection closure and
+   task/shim inventories are different facts. A later successful request proves
+   availability, not absence of accumulated leaks. Completion channels only prove
+   work preceding their close; inspect code that runs afterward. Require a
+   scoped before/after or explicit termination check appropriate to the claim,
+   not an arbitrary global goroutine count or mandatory tool dependency.
 6. **Identity and authority:** Check exact resource identity, ownership, collision
    handling, concurrent writers, deployment scope and rollback inputs. Names and
    historical placement are not authorization or proof of exclusive scope.
@@ -107,6 +122,12 @@ or a clear; do not equate an absent finding or a PASS total with proof.
 11. **Contradictions and stale evidence:** Compare criteria, raw results, finding
     dispositions, summary and final state. Look for omitted failures, restored
     state only assumed, changed predicates and narrowed completion headlines.
+   Read linked evidence when supported. Compare each claimed PASS with the
+   actual stimulus and observation: a successful large transfer does not test
+   injected late failure; a client returning does not prove exec reaping.
+   Compilation is not execution. Mock-backed contract tests and runtime smoke
+   tests cannot jointly establish a failure path neither actually exercises.
+   Keep required NOT RUN visible even when another layer passes.
 12. **Review limits:** Self-review, a second reading, checklist counts and an AI
     review are not independent execution evidence or guarantees of completeness.
     If required evidence is inaccessible or analysis is truncated, state the gap
@@ -136,6 +157,15 @@ smallest repair or next discriminating check. Anchor comments to changed lines
 where supported; put cross-cutting evidence gaps in the review summary rather
 than inventing code locations. Keep feedback concise and skip style-only advice.
 
+Identify the reviewed head and quote the exact current claim or requirement being
+challenged. Classify concerns as SOURCE DEFECT, EXECUTION GAP, EVIDENCE MISMATCH,
+or ACCESS LIMITATION. An inaccessible link establishes an access limitation,
+not that evidence is absent or inadequate. If requirements cannot be retrieved,
+state that limitation instead of inventing a contract. A defensible mismatch
+requires describing what the available result proves and what it does not.
+Review proposed fixes against the whole predicate and neighboring instances;
+code suggestions are unexecuted proposals, not repair-validation evidence.
+
 Before concluding, perform a contradiction check against the original scope and
 raw evidence. Required FAIL, BLOCKED or NOT RUN prevents acceptance; status-word
 counts cannot establish a clear. If any required finding is OPEN, lead the brief
@@ -146,3 +176,8 @@ approval, runtime acceptance or guarantee that all requirements passed.
 For a follow-up review, include a compact delta: new gaps, repaired findings,
 new evidence, retained blockers and why the verdict changed or stayed the same.
 Do not erase previous failures or claim a repair loop when only wording changed.
+Mark source-addressed findings as source-addressed even if execution is pending;
+do not repeat them as unchanged defects. Preserve the distinct execution gap and
+cite which relevant inputs changed. Fewer comments or more review rounds alone
+do not demonstrate improvement. Never equate "no new inline defects" with
+completion, runtime acceptance or all previous findings being revalidated.
