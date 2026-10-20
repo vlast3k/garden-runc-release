@@ -755,7 +755,7 @@ source "$1"
     def test_production_contract_records_reviewed_guardian_identities(self) -> None:
         root = VERIFIER.parent.parent
         metadata = json.loads((root / "PROVENANCE.json").read_text(encoding="utf-8"))
-        accepted_revision = "1b186bea3bfbee16970de1727f0f896c9077abbc"
+        accepted_revision = "b55c6c6df4b9c78b70136c7597a5ccf92035d449"
         self.assertEqual(metadata["guardian"]["revision"], accepted_revision)
         self.assertEqual(metadata["downstream_patches"][0]["revision"], CLEANUP_PATCH_REVISION)
         self.assertEqual(metadata["behavior_gates"][0]["test_anchors"][0]["selector"], CLEANUP_SELECTOR)
