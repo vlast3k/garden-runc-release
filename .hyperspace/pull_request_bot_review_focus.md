@@ -166,9 +166,9 @@ behavioral evidence, but unchanged implementation does not invalidate a genuine
 documentation correction. Do not discover one predictable copy of the same issue
 per round or repeat historical source-addressed findings as current defects.
 
-The bot cannot inspect live state or execute tests. If t09a or other evidence is
+The bot cannot inspect live state or execute tests. If required or linked evidence is
 inaccessible, report ACCESS LIMITATION and a bounded agent-side check, not proof
-that access is unavailable. Do not demand arbitrary live fault injection or
+that the evidence itself is absent or inadequate. Do not demand arbitrary live fault injection or
 operational mutation. A clean review is not runtime acceptance. Distinguish
 publishing an honestly incomplete evidence record from claiming acceptance:
 missing acceptance evidence blocks the latter, not automatically the former.
