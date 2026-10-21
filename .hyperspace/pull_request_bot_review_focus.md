@@ -217,6 +217,19 @@ approval, runtime acceptance or guarantee that all requirements passed.
 
 For a follow-up review, include a compact delta: new gaps, repaired findings,
 new evidence, retained blockers and why the verdict changed or stayed the same.
+Separate the final summary into Verdict, Addressed Findings, Retained Blockers
+and Nonblocking Observations; use "none" where applicable. Always put Verdict
+first, leading with NOT COMPLETE or BLOCKED when required findings remain. Enumerate
+each retained blocker with its stable ID, original requirement or concrete impact,
+current source/raw evidence and observable closure check, including summary-only
+gaps. If a prior ID was reused for different concerns, disambiguate it explicitly.
+Do not merely say "prior blockers remain" or require the agent to infer them from
+old threads. Reassess whether each still applies to the current head and respond
+to recorded repairs or rejections; do not promote a reviewer access limit to a
+proven defect. State which retained gaps prevent acceptance of the requested scope
+even when there are no new inline findings. No retained blockers is not proof of
+acceptance. A source-backed rejection does not require bot agreement; review is
+advisory and does not grant merge or operational authority.
 Do not erase previous failures or claim a repair loop when only wording changed.
 Mark source-addressed findings as source-addressed even if execution is pending;
 do not repeat them as unchanged defects. Preserve the distinct execution gap and
