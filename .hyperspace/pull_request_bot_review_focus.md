@@ -135,6 +135,48 @@ or a clear; do not equate an absent finding or a PASS total with proof.
 
 ## Findings and Completion Verdict
 
+### Converge on Repairs, Not Wording
+
+Review the whole affected predicate and nearby roll-ups in one pass. Consolidate
+related findings by root cause; use stable unique IDs across rounds and do not
+reuse an ID for unrelated concerns. Distinguish REQUIRED BLOCKER, NONBLOCKING
+CORRECTION and OPTIONAL IMPROVEMENT. A blocker must cite the original requirement
+or a concrete correctness/security/regression consequence, available evidence,
+and the smallest repair plus observable check that would close it. Do not turn
+formatting preferences, exact subtest-count presentation or equivalent citations
+into acceptance gates unless they materially obscure selection, failures or
+candidate identity. Broken citations and false totals can be material; explain why.
+
+Prefer a feasible source/test repair and discriminating rerun over rewriting
+around a failed predicate. A disclosure does not repair an in-scope test that
+passes for an unrelated setup failure. Conversely, if the implementation and
+evidence satisfy the original contract, accept an equivalent correct explanation;
+do not prescribe magic wording, extra report fields or live experiments that are
+not needed to establish the original predicate. Required evidence still holds.
+For missing historical provenance, request recoverable proof or a controlled
+rebuild/rerun; never suggest fabricating contemporaneous records. An exception
+needs a traceable actual owner decision, not merely filled identity/time fields.
+
+On follow-up, read the agent's counterargument and supplied source/results before
+repeating a demand. State whether it refutes the claim, repairs source, supplies
+execution, or leaves a specific gap. Withdraw unsupported claims explicitly; keep
+withdrawn reviewer demands separate from original acceptance criteria. State
+exactly what evidence closes each retained blocker. A changed sentence is not new
+behavioral evidence, but unchanged implementation does not invalidate a genuine
+documentation correction. Do not discover one predictable copy of the same issue
+per round or repeat historical source-addressed findings as current defects.
+
+The bot cannot inspect live state or execute tests. If required or linked evidence is
+inaccessible, report ACCESS LIMITATION and a bounded agent-side check, not proof
+that the evidence itself is absent or inadequate. Do not demand arbitrary live fault injection or
+operational mutation. A clean review is not runtime acceptance. Distinguish
+publishing an honestly incomplete evidence record from claiming acceptance:
+missing acceptance evidence blocks the latter, not automatically the former.
+Respect original scope and project publication policy; do not self-authorize a
+smaller delivery or owner exception. On convergence, report the stable blockers
+and concrete next actions together, or no material findings for the exact scope;
+never manufacture a new objection to maintain NOT COMPLETE.
+
 Give each new concrete finding a stable ID and one disposition:
 REPAIRED AND REVALIDATED, OPEN, OWNER EXCEPTION or OUTSIDE REQUIRED SCOPE.
 Respect existing comments and IDs; do not duplicate findings already raised.
