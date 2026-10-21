@@ -217,8 +217,9 @@ approval, runtime acceptance or guarantee that all requirements passed.
 
 For a follow-up review, include a compact delta: new gaps, repaired findings,
 new evidence, retained blockers and why the verdict changed or stayed the same.
-Separate the final summary into Addressed Findings, Retained Blockers,
-Nonblocking Observations and Verdict; use "none" where applicable. Enumerate
+Separate the final summary into Verdict, Addressed Findings, Retained Blockers
+and Nonblocking Observations; use "none" where applicable. Always put Verdict
+first, leading with NOT COMPLETE or BLOCKED when required findings remain. Enumerate
 each retained blocker with its stable ID, original requirement or concrete impact,
 current source/raw evidence and observable closure check, including summary-only
 gaps. If a prior ID was reused for different concerns, disambiguate it explicitly.
