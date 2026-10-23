@@ -2,12 +2,14 @@
 
 import argparse
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
 import sys
+import tarfile
 from typing import Any
 
 
@@ -74,13 +76,15 @@ def validate_anchor(value: Any, location: str) -> None:
 
 
 def validate_metadata(value: Any) -> dict[str, Any]:
+    if type(value) is dict and type(value.get("schema_version")) is int and value["schema_version"] == 2:
+        return validate_monorepo_metadata(value)
     root = require_object(
         value,
         "metadata",
         {"schema_version", "release", "toolchain", "guardian", "downstream_patches", "behavior_gates"},
     )
     if type(root["schema_version"]) is not int or root["schema_version"] != 1:
-        raise MetadataError("schema_version must be the supported integer 1")
+        raise MetadataError("schema_version must be the supported integer 1 or 2")
 
     release = require_object(root["release"], "release", {"name", "repository", "final_config"})
     require_string(release["name"], "release.name", IDENTIFIER)
@@ -117,6 +121,10 @@ def validate_metadata(value: Any) -> dict[str, Any]:
     if guardian["branch"] != GUARDIAN_BRANCH:
         raise MetadataError(f"guardian.branch must be {GUARDIAN_BRANCH}")
 
+    return validate_behavior_records(root)
+
+
+def validate_behavior_records(root: dict[str, Any]) -> dict[str, Any]:
     patches = root["downstream_patches"]
     if type(patches) is not list:
         raise MetadataError("downstream_patches must be an array")
@@ -178,6 +186,30 @@ def validate_metadata(value: Any) -> dict[str, Any]:
     if cleanup_gate["status"] != "required":
         raise MetadataError("guardian-created-task-cleanup must remain required")
     return root
+
+
+def validate_monorepo_metadata(value: Any) -> dict[str, Any]:
+    root = require_object(value, "metadata", {"schema_version", "release", "toolchain", "guardian", "downstream_patches", "behavior_gates"})
+    release = require_object(root["release"], "release", {"name", "repository", "final_config"})
+    if release != {"name": "garden-runc", "repository": RELEASE_REPOSITORY, "final_config": "config/final.yml"}:
+        raise MetadataError("release identity does not match the Garden monorepo contract")
+    guardian = require_object(root["guardian"], "guardian", {"path", "tree", "upstream_revision", "ported_revision", "ported_repository"})
+    if guardian["path"] != "src/code.cloudfoundry.org/guardian":
+        raise MetadataError("guardian.path must identify the canonical inline Guardian tree")
+    for field in ("tree", "upstream_revision", "ported_revision"):
+        require_string(guardian[field], f"guardian.{field}", SHA1)
+    if guardian["ported_repository"] != GUARDIAN_REPOSITORY:
+        raise MetadataError("guardian.ported_repository must identify the independent Guardian source")
+    toolchain = require_object(root["toolchain"], "toolchain", {"package", "fingerprint", "package_sha256", "archive", "archive_sha256"})
+    require_string(toolchain["package"], "toolchain.package", GO_PACKAGE)
+    require_string(toolchain["fingerprint"], "toolchain.fingerprint", SHA256)
+    require_string(toolchain["package_sha256"], "toolchain.package_sha256", SHA256)
+    require_string(toolchain["archive"], "toolchain.archive", GO_ARCHIVE)
+    require_string(toolchain["archive_sha256"], "toolchain.archive_sha256", SHA256)
+    version = toolchain["archive"].split(".")
+    if toolchain["package"] != f"golang-{version[0][2:]}.{version[1]}-linux":
+        raise MetadataError("toolchain package and archive major/minor versions disagree")
+    return validate_behavior_records(root)
 
 
 def run_git(root: Path, *args: str, ceiling: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -257,7 +289,9 @@ def packaging_commands(archive: str) -> list[str]:
     ]
 
 
-def verify(root: Path, metadata: dict[str, Any]) -> list[str]:
+def verify(root: Path, metadata: dict[str, Any], toolchain_package: Path | None = None) -> list[str]:
+    if metadata["schema_version"] == 2:
+        return verify_monorepo(root, metadata, toolchain_package)
     failures: list[str] = []
     release = metadata["release"]
     toolchain = metadata["toolchain"]
@@ -470,9 +504,110 @@ def verify(root: Path, metadata: dict[str, Any]) -> list[str]:
     return failures
 
 
+def package_members(archive: tarfile.TarFile) -> dict[str, tarfile.TarInfo]:
+    members = {}
+    for member in archive.getmembers():
+        name = member.name.removeprefix("./").rstrip("/")
+        if name in {"", "."} and member.isdir():
+            continue
+        require_path(name, "archive member")
+        if name in members or not (member.isfile() or member.isdir()):
+            raise MetadataError(f"duplicate or non-regular archive member: {name}")
+        if member.size > 256 * 1024 * 1024:
+            raise MetadataError(f"oversized archive member: {name}")
+        members[name] = member
+    return members
+
+
+def verify_vendored_toolchain(root: Path, toolchain: dict[str, Any], package: Path | None, failures: list[str]) -> None:
+    name = toolchain["package"]
+    lock = read_yaml(root, f"packages/{name}/spec.lock", failures, "vendored Go package lock")
+    if lock != {"name": name, "fingerprint": toolchain["fingerprint"]}:
+        failures.append("vendored Go package lock does not match provenance")
+    index = read_yaml(root, f".final_builds/packages/{name}/index.yml", failures, "vendored Go package index")
+    builds = index.get("builds") if index else None
+    build = builds.get(toolchain["fingerprint"], {}) if type(builds) is dict else {}
+    if type(build) is not dict or build.get("version") != toolchain["fingerprint"] or build.get("sha1") != f"sha256:{toolchain['package_sha256']}":
+        failures.append("vendored Go package index does not match provenance")
+    if package is None:
+        failures.append("--toolchain-package is required; metadata alone does not verify hydrated Go bytes")
+        return
+    try:
+        if package.is_symlink() or not package.is_file():
+            raise MetadataError("toolchain package must be a regular non-symlink file")
+        if package.stat().st_size > 256 * 1024 * 1024:
+            raise MetadataError("toolchain package exceeds the supported size bound")
+        with package.open("rb") as stream:
+            if hashlib.file_digest(stream, "sha256").hexdigest() != toolchain["package_sha256"]:
+                raise MetadataError("hydrated Go package SHA-256 does not match provenance")
+            stream.seek(0)
+            with tarfile.open(fileobj=stream, mode="r:gz") as archive:
+                members = package_members(archive)
+                required = {"packaging", "compile.env.unix", "runtime.env.unix", toolchain["archive"]}
+                if set(members) != required or any(not member.isfile() for member in members.values()):
+                    raise MetadataError("vendored Go source package has unexpected contents")
+                inner_file = archive.extractfile(members[toolchain["archive"]])
+                inner = inner_file.read() if inner_file else b""
+                if hashlib.sha256(inner).hexdigest() != toolchain["archive_sha256"]:
+                    raise MetadataError("inner Go archive SHA-256 does not match provenance")
+        with tarfile.open(fileobj=io.BytesIO(inner), mode="r:gz") as archive:
+            versions = [member for member in archive.getmembers() if member.name.removeprefix("./") == "go/VERSION"]
+            if len(versions) != 1 or not versions[0].isfile() or versions[0].size > 1024:
+                raise MetadataError("inner Go VERSION is missing, duplicated or unsafe")
+            version_file = archive.extractfile(versions[0])
+            version = version_file.read().decode("ascii").splitlines()[0] if version_file else ""
+            if version != toolchain["archive"].removesuffix(".linux-amd64.tar.gz"):
+                raise MetadataError("inner Go VERSION does not match provenance")
+    except (OSError, ValueError, UnicodeError, tarfile.TarError, IndexError) as error:
+        failures.append(f"cannot verify vendored Go bytes: {error}")
+
+
+def verify_monorepo(root: Path, metadata: dict[str, Any], toolchain_package: Path | None) -> list[str]:
+    root = root.resolve()
+    failures: list[str] = []
+    top = git_value(root, failures, "release root", "rev-parse", "--show-toplevel")
+    if not top or Path(top).resolve() != root:
+        failures.append("release root is not the exact declared worktree")
+    origin = git_value(root, failures, "release origin", "config", "--get", "remote.origin.url")
+    if origin != RELEASE_REPOSITORY:
+        failures.append("release origin does not match provenance")
+    status = git_value(root, failures, "release status", "status", "--porcelain", "--untracked-files=all")
+    if status:
+        failures.append("release source is dirty; commit all candidate inputs before verification")
+    flags = git_value(root, failures, "release index flags", "ls-files", "-v", "-z")
+    if flags and any(entry[0].islower() or entry[0] == "S" for entry in flags.split("\0") if entry):
+        failures.append("release source has hidden index flags")
+    final = read_yaml(root, "config/final.yml", failures, "release final config")
+    if not final or final.get("final_name") != "garden-runc":
+        failures.append("release name does not match provenance")
+    guardian = metadata["guardian"]
+    path = guardian["path"]
+    entry = git_value(root, failures, "inline Guardian tree", "ls-tree", "HEAD", "--", path)
+    if not entry or entry.split()[:3] != ["040000", "tree", guardian["tree"]]:
+        failures.append("inline Guardian tree does not match provenance")
+    try:
+        safe_repository_file(root, f"{path}/go.mod")
+    except OSError as error:
+        failures.append(f"unsafe inline Guardian source: {error}")
+    owner = git_value(root / path, failures, "Guardian owning root", "rev-parse", "--show-toplevel") if (root / path).is_dir() else None
+    if not owner or Path(owner).resolve() != root:
+        failures.append("Guardian must be inline source owned by the release Git worktree")
+    if run_git(root, "cat-file", "-e", f"{guardian['upstream_revision']}^{{commit}}").returncode != 0:
+        failures.append("declared upstream revision is missing from release history")
+    for category in ("downstream_patches", "behavior_gates"):
+        for record in metadata[category]:
+            for anchor in record["test_anchors"]:
+                source = read_text(root, f"{path}/{anchor['path']}", failures, f"{record['id']} anchor")
+                if source is not None and anchor["selector"] not in source:
+                    failures.append(f"missing test anchor selector for {record['id']}")
+    verify_vendored_toolchain(root, metadata["toolchain"], toolchain_package, failures)
+    return failures
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Verify the Garden release-local contract consistency")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parent.parent)
+    parser.add_argument("--toolchain-package", type=Path)
     args = parser.parse_args()
     root = args.root.resolve()
     try:
@@ -482,7 +617,7 @@ def main() -> int:
         print(f"provenance metadata invalid: {error}", file=sys.stderr)
         return 2
 
-    failures = verify(root, metadata)
+    failures = verify(root, metadata, args.toolchain_package)
     if failures:
         print("provenance verification failed:", file=sys.stderr)
         for failure in failures:

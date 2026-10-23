@@ -1,0 +1,22 @@
+diff --git a/vendor/code.cloudfoundry.org/garden/server/request_handling.go b/vendor/code.cloudfoundry.org/garden/server/request_handling.go
+--- a/vendor/code.cloudfoundry.org/garden/server/request_handling.go
++++ b/vendor/code.cloudfoundry.org/garden/server/request_handling.go
+@@ -281,14 +281,13 @@ func (s *GardenServer) handleStreamOut(w http.ResponseWriter, r *http.Request) {
++	defer reader.Close()
+ 	n, err := io.Copy(w, reader)
+ 	if err != nil {
+-		if err := reader.Close(); err != nil {
+-			hLog.Error("failed-to-close", err)
+-		}
+-
+ 		if n == 0 {
+ 			s.writeError(w, err, hLog)
++			return
+ 		}
+ 
+-		return
++		hLog.Error("stream-out-failed", err)
++		panic(http.ErrAbortHandler)
+ 	}
+ 
+ 	hLog.Info("streamed-out")

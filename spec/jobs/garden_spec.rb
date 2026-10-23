@@ -11,26 +11,91 @@ describe 'garden' do
   let(:template) { job.template('config/config.ini') }
   let(:properties) {{}}
 
-  ['config/grootfs_config.yml', 'config/privileged_grootfs_config.yml'].each do |config_path|
+  describe 'alternative runtime configuration' do
+    def render_runtime(properties)
+      IniParse.parse(template.render({'garden' => properties}))['server']
+    end
+
+    it 'keeps stock runtime and process backend defaults' do
+      server = render_runtime({})
+      expect(server['containerd-socket']).to eql('/var/vcap/sys/run/containerd/containerd.sock')
+      expect(server['containerd-runtime-type']).to be_nil
+      expect(server['use-containerd-for-processes']).to be_nil
+    end
+
+    it 'renders an explicitly selected runtime without changing the process backend' do
+      server = render_runtime({'containerd_runtime_type' => 'io.containerd.runsc.v1'})
+      expect(server['containerd-runtime-type']).to eql('io.containerd.runsc.v1')
+      expect(server['use-containerd-for-processes']).to be_nil
+    end
+
+    it 'renders an explicitly enabled process backend without selecting runsc' do
+      server = render_runtime({'use_containerd_for_processes' => true})
+      expect(server['containerd-runtime-type']).to be_nil
+      expect(server['use-containerd-for-processes']).to eql(true)
+    end
+
+    it 'renders the complete explicit runsc opt-in' do
+      server = render_runtime({'containerd_runtime_type' => 'io.containerd.runsc.v1', 'use_containerd_for_processes' => true})
+      expect(server['containerd-runtime-type']).to eql('io.containerd.runsc.v1')
+      expect(server['use-containerd-for-processes']).to eql(true)
+      expect(server['containerd-socket']).to eql('/var/vcap/sys/run/containerd/containerd.sock')
+    end
+
+    it 'omits containerd settings when the backend is disabled' do
+      server = render_runtime({'containerd_mode' => false, 'containerd_runtime_type' => 'io.containerd.runsc.v1', 'use_containerd_for_processes' => true})
+      expect(server['containerd-socket']).to be_nil
+      expect(server['containerd-runtime-type']).to be_nil
+      expect(server['use-containerd-for-processes']).to be_nil
+    end
+
+    it 'keeps containerd v3 configuration without obsolete plugin disable IDs' do
+      rendered = job.template('config/containerd.toml').render({})
+      expect(rendered).to match(/^version = 3$/)
+      expect(rendered).to match(/^disabled_plugins = \[\]$/)
+      expect(rendered).to include("address = '/var/vcap/sys/run/containerd/containerd.sock'")
+    end
+  end
+
+  {
+    'config/grootfs_config.yml' => '/var/vcap/data/grootfs/store/unprivileged',
+    'config/privileged_grootfs_config.yml' => '/var/vcap/data/grootfs/store/privileged'
+  }.each do |config_path, store_path|
     describe "#{config_path} quota property validation" do
-      [0, 1, [], {}, 'true', 'false', 'yes', 'not-a-bool', "true\n  disk_limit_size_bytes: 0"].each do |value|
-        it "rejects non-Boolean #{value.inspect}" do
-          expect {
-            job.template(config_path).render({'grootfs' => {'exclude_image_from_quota' => value}})
-          }.to raise_error(/grootfs.exclude_image_from_quota must be a Boolean/)
-        end
+      let(:quota_template) { job.template(config_path) }
+
+      it 'defaults image quota exclusion to false' do
+        rendered = YAML.safe_load(quota_template.render({}))
+        expect(rendered.fetch('create').fetch('exclude_image_from_quota')).to eql(false)
       end
 
       it 'uses the BOSH default for a null property' do
-        rendered = YAML.safe_load(job.template(config_path).render({'grootfs' => {'exclude_image_from_quota' => nil}}))
+        rendered = YAML.safe_load(quota_template.render({'grootfs' => {'exclude_image_from_quota' => nil}}))
         expect(rendered.fetch('create').fetch('exclude_image_from_quota')).to eql(false)
       end
 
       [false, true].each do |value|
         it "renders native Boolean #{value}" do
-          rendered = YAML.safe_load(job.template(config_path).render({'grootfs' => {'exclude_image_from_quota' => value}}))
+          rendered = YAML.safe_load(quota_template.render({'grootfs' => {'exclude_image_from_quota' => value}}))
           expect(rendered.fetch('create').fetch('exclude_image_from_quota')).to eql(value)
+          expect(rendered).not_to have_key('exclude_image_from_quota')
         end
+      end
+
+      [0, 1, [], {}, 'true', 'false', 'yes', 'not-a-bool', "true\n  disk_limit_size_bytes: 0"].each do |value|
+        it "rejects non-Boolean #{value.inspect}" do
+          expect {
+            quota_template.render({'grootfs' => {'exclude_image_from_quota' => value}})
+          }.to raise_error(/grootfs.exclude_image_from_quota must be a Boolean/)
+        end
+      end
+
+      it 'preserves the store and other create settings when enabled' do
+        rendered = YAML.safe_load(quota_template.render({'grootfs' => {'exclude_image_from_quota' => true}}))
+        expect(rendered.fetch('store')).to eql(store_path)
+        expect(rendered.fetch('create').fetch('without_mount')).to eql(false)
+        expect(rendered.fetch('create').fetch('skip_layer_validation')).to eql(true)
+        expect(rendered.fetch('create').fetch('insecure_registries')).to eql([])
       end
     end
   end
@@ -91,8 +156,15 @@ describe 'garden' do
         expect(rendered_template['server']['default-grace-time']).to eql(0)
       end
 
-      it 'sets the default container blockio wait to 0' do
+      it 'sets the default container blockio weight to 0' do
         expect(rendered_template['server']['default-container-blockio-weight']).to eql(0)
+      end
+
+      it 'does not render io-max properties when defaults are 0' do
+        expect(rendered_template['server']['container-io-max-read-bps']).to eql(nil)
+        expect(rendered_template['server']['container-io-max-write-bps']).to eql(nil)
+        expect(rendered_template['server']['container-io-max-read-iops']).to eql(nil)
+        expect(rendered_template['server']['container-io-max-write-iops']).to eql(nil)
       end
 
       it 'sets the default container rootfs to busybox' do
@@ -223,6 +295,58 @@ describe 'garden' do
         end
       end
 
+      context 'container io.max throttling' do
+        context 'when all io_max properties are set' do
+          let(:properties) {
+            {
+              'garden' => {
+                'container_io_max_read_bps' => 59768832,
+                'container_io_max_write_bps' => 59768832,
+                'container_io_max_read_iops' => 900,
+                'container_io_max_write_iops' => 900
+              }
+            }
+          }
+
+          it 'renders container-io-max-read-bps' do
+            expect(rendered_template['server']['container-io-max-read-bps']).to eql(59768832)
+          end
+
+          it 'renders container-io-max-write-bps' do
+            expect(rendered_template['server']['container-io-max-write-bps']).to eql(59768832)
+          end
+
+          it 'renders container-io-max-read-iops' do
+            expect(rendered_template['server']['container-io-max-read-iops']).to eql(900)
+          end
+
+          it 'renders container-io-max-write-iops' do
+            expect(rendered_template['server']['container-io-max-write-iops']).to eql(900)
+          end
+        end
+
+        context 'when only bps properties are set' do
+          let(:properties) {
+            {
+              'garden' => {
+                'container_io_max_read_bps' => 104857600,
+                'container_io_max_write_bps' => 52428800
+              }
+            }
+          }
+
+          it 'renders bps values' do
+            expect(rendered_template['server']['container-io-max-read-bps']).to eql(104857600)
+            expect(rendered_template['server']['container-io-max-write-bps']).to eql(52428800)
+          end
+
+          it 'renders iops as 0' do
+            expect(rendered_template['server']['container-io-max-read-iops']).to eql(0)
+            expect(rendered_template['server']['container-io-max-write-iops']).to eql(0)
+          end
+        end
+      end
+
       it 'sets the network-pool to 10.254.0.0/22' do
         expect(rendered_template['server']['network-pool']).to eql('10.254.0.0/22')
       end
@@ -237,93 +361,6 @@ describe 'garden' do
 
       it 'does not enable the container network metrics' do
         expect(rendered_template['server']['enable-container-network-metrics']).to eql(nil)
-      end
-
-      context 'containerd section' do
-        it 'sets the containerd socket' do
-          expect(rendered_template['server']['containerd-socket']).to eql('/var/vcap/sys/run/containerd/containerd.sock')
-        end
-
-        it 'does not set containerd-runtime-type by default' do
-          expect(rendered_template['server']['containerd-runtime-type']).to be_nil
-        end
-
-        it 'does not set use-containerd-for-processes by default' do
-          expect(rendered_template['server']['use-containerd-for-processes']).to be_nil
-        end
-      end
-
-      context 'when containerd_runtime_type is set' do
-        let(:properties) {
-          {
-            'garden' => {
-              'containerd_runtime_type' => 'io.containerd.runsc.v1',
-            }
-          }
-        }
-
-        it 'sets containerd-runtime-type in config.ini' do
-          expect(rendered_template['server']['containerd-runtime-type']).to eql('io.containerd.runsc.v1')
-        end
-
-        it 'does not set use-containerd-for-processes unless explicitly enabled' do
-          expect(rendered_template['server']['use-containerd-for-processes']).to be_nil
-        end
-      end
-
-      context 'when use_containerd_for_processes is enabled' do
-        let(:properties) {
-          {
-            'garden' => {
-              'use_containerd_for_processes' => true,
-            }
-          }
-        }
-
-        it 'sets use-containerd-for-processes to true' do
-          expect(rendered_template['server']['use-containerd-for-processes']).to eql(true)
-        end
-      end
-
-      context 'when both containerd_runtime_type and use_containerd_for_processes are set' do
-        let(:properties) {
-          {
-            'garden' => {
-              'containerd_runtime_type' => 'io.containerd.runsc.v1',
-              'use_containerd_for_processes' => true,
-            }
-          }
-        }
-
-        it 'sets containerd-runtime-type' do
-          expect(rendered_template['server']['containerd-runtime-type']).to eql('io.containerd.runsc.v1')
-        end
-
-        it 'sets use-containerd-for-processes' do
-          expect(rendered_template['server']['use-containerd-for-processes']).to eql(true)
-        end
-
-        it 'still sets the containerd socket' do
-          expect(rendered_template['server']['containerd-socket']).to eql('/var/vcap/sys/run/containerd/containerd.sock')
-        end
-      end
-
-      context 'when containerd_mode is disabled' do
-        let(:properties) {
-          {
-            'garden' => {
-              'containerd_mode' => false,
-              'containerd_runtime_type' => 'io.containerd.runsc.v1',
-              'use_containerd_for_processes' => true,
-            }
-          }
-        }
-
-        it 'does not render containerd settings' do
-          expect(rendered_template['server']['containerd-socket']).to be_nil
-          expect(rendered_template['server']['containerd-runtime-type']).to be_nil
-          expect(rendered_template['server']['use-containerd-for-processes']).to be_nil
-        end
       end
 
       context 'when container network metrics are enabled' do
@@ -367,107 +404,96 @@ describe 'garden' do
     end
   end
 
-  context 'config/grootfs_config.yml' do
-    let(:grootfs_template) { job.template('config/grootfs_config.yml') }
+  context 'bin/grootfs-utils' do
+    let(:template) { job.template('bin/grootfs-utils') }
 
     context 'with defaults' do
-      let(:rendered) { YAML.safe_load(grootfs_template.render(properties)) }
+      let(:rendered_template) { template.render(properties) }
 
-      it 'sets the unprivileged store path' do
-        expect(rendered['store']).to eql('/var/vcap/data/grootfs/store/unprivileged')
+      it 'passes the default reserved_space_for_other_jobs_in_mb to thresholder' do
+        expect(rendered_template).to include('/var/vcap/packages/thresholder/bin/thresholder "15360"')
       end
 
-      it 'defaults exclude_image_from_quota to false under create' do
-        expect(rendered['create']['exclude_image_from_quota']).to eql(false)
+      it 'passes routine_gc as false' do
+        expect(rendered_template).to match(/thresholder "15360" "false"/)
       end
 
-      it 'does not set exclude_image_from_quota at top level' do
-        expect(rendered.key?('exclude_image_from_quota')).to eql(false)
+      it 'passes the default gc_threshold_factor of 1.0' do
+        expect(rendered_template).to match(/"-1" "1.0"$/)
       end
 
-      it 'renders metron_endpoint from the default dropsonde_port' do
-        expect(rendered['metron_endpoint']).to eql('127.0.0.1:3457')
+      it 'invokes thresholder for both unprivileged and privileged configs' do
+        expect(rendered_template).to include('$GARDEN_CONFIG_DIR/grootfs_config.yml')
+        expect(rendered_template).to include('$GARDEN_CONFIG_DIR/privileged_grootfs_config.yml')
       end
     end
 
-    context 'when grootfs.exclude_image_from_quota is true' do
-      let(:properties) {
+    context 'when grootfs.gc_threshold_factor is set' do
+      let(:properties) do
         {
           'grootfs' => {
-            'exclude_image_from_quota' => true,
+            'gc_threshold_factor' => 0.5
           }
         }
-      }
-      let(:rendered) { YAML.safe_load(grootfs_template.render(properties)) }
-
-      it 'sets exclude_image_from_quota to true under create' do
-        expect(rendered['create']['exclude_image_from_quota']).to eql(true)
       end
 
-      it 'does not set exclude_image_from_quota at top level' do
-        expect(rendered.key?('exclude_image_from_quota')).to eql(false)
-      end
+      let(:rendered_template) { template.render(properties) }
 
-      it 'preserves the store path' do
-        expect(rendered['store']).to eql('/var/vcap/data/grootfs/store/unprivileged')
-      end
-
-      it 'preserves other create section fields' do
-        expect(rendered['create']['skip_layer_validation']).to eql(true)
+      it 'passes the configured factor to thresholder' do
+        expect(rendered_template).to match(/"-1" "0.5"$/)
       end
     end
 
-    context 'when grootfs.exclude_image_from_quota is explicitly false' do
-      let(:properties) {
+    context 'when grootfs.routine_gc is true' do
+      let(:properties) do
         {
           'grootfs' => {
-            'exclude_image_from_quota' => false,
+            'routine_gc' => true
           }
         }
-      }
-      let(:rendered) { YAML.safe_load(grootfs_template.render(properties)) }
-
-      it 'sets exclude_image_from_quota to false under create' do
-        expect(rendered['create']['exclude_image_from_quota']).to eql(false)
-      end
-    end
-  end
-
-  context 'config/privileged_grootfs_config.yml' do
-    let(:priv_template) { job.template('config/privileged_grootfs_config.yml') }
-
-    context 'with defaults' do
-      let(:rendered) { YAML.safe_load(priv_template.render(properties)) }
-
-      it 'sets the privileged store path' do
-        expect(rendered['store']).to eql('/var/vcap/data/grootfs/store/privileged')
       end
 
-      it 'defaults exclude_image_from_quota to false under create' do
-        expect(rendered['create']['exclude_image_from_quota']).to eql(false)
+      let(:rendered_template) { template.render(properties) }
+
+      it 'passes routine_gc as true' do
+        expect(rendered_template).to match(/thresholder "15360" "true"/)
       end
 
-      it 'does not set exclude_image_from_quota at top level' do
-        expect(rendered.key?('exclude_image_from_quota')).to eql(false)
+      it 'still passes the default gc_threshold_factor' do
+        expect(rendered_template).to match(/"-1" "1.0"$/)
       end
     end
 
-    context 'when grootfs.exclude_image_from_quota is true' do
-      let(:properties) {
+    context 'when grootfs.reserved_space_for_other_jobs_in_mb is customized' do
+      let(:properties) do
         {
           'grootfs' => {
-            'exclude_image_from_quota' => true,
+            'reserved_space_for_other_jobs_in_mb' => 5000,
+            'gc_threshold_factor' => 0.75
           }
         }
-      }
-      let(:rendered) { YAML.safe_load(priv_template.render(properties)) }
-
-      it 'sets exclude_image_from_quota to true under create' do
-        expect(rendered['create']['exclude_image_from_quota']).to eql(true)
       end
 
-      it 'preserves the privileged store path' do
-        expect(rendered['store']).to eql('/var/vcap/data/grootfs/store/privileged')
+      let(:rendered_template) { template.render(properties) }
+
+      it 'passes the custom reserved space and factor' do
+        expect(rendered_template).to match(/thresholder "5000" "false" "\$DATA_DIR" "\$GARDEN_CONFIG_DIR\/grootfs_config.yml" "-1" "-1" "0.75"/)
+      end
+    end
+
+    context 'when deprecated garden.graph_cleanup_threshold_in_mb is set' do
+      let(:properties) do
+        {
+          'garden' => {
+            'graph_cleanup_threshold_in_mb' => 2000
+          }
+        }
+      end
+
+      let(:rendered_template) { template.render(properties) }
+
+      it 'passes the deprecated threshold alongside the factor' do
+        expect(rendered_template).to match(/"2000" "-1" "1.0"$/)
       end
     end
   end

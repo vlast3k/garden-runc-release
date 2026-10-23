@@ -1,74 +1,73 @@
 # Release-local contract consistency
 
-`PROVENANCE.json` is the active, versioned release-local source contract. Run:
+`PROVENANCE.json` schema 2 describes the canonical Garden monorepo layout.
+Guardian remains its own Go module at `src/code.cloudfoundry.org/guardian`,
+but is inline source rather than a separate Git worktree or gitlink.
 
 ```sh
-python3 -B scripts/verify_provenance.py --root "$PWD"
-python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'
+python3 -B scripts/verify_provenance.py --root "$PWD" \
+	--toolchain-package /absolute/path/to/golang-source-package.tgz
+python3 -B -m unittest discover -s scripts/tests -p 'test_*provenance.py'
 ```
 
-The verifier checks consistency and fails closed unless the release name, release origin, Go package and
-hydrated archive bytes, Guardian gitlink, initialized Guardian worktree root,
-Guardian HEAD/origin, recorded `main` branch, declared revision existence, and both
-source worktrees agree exactly and are clean. Hidden `assume-unchanged` and
-`skip-worktree` index flags are rejected in both repositories. The
-hydrated Go archive must be a regular non-symlink file below the approved `blobs/`
-root and match the recorded size and SHA-256. Initialize Guardian with
-`git submodule update --init src/guardian`.
+The toolchain input is the **BOSH source package**, not the raw Go archive or a
+compiled BOSH package. Obtain the exact `packages/golang-1.27-linux.tgz` member
+from a verified source-release archive. This command neither hydrates packages
+nor accesses a director, starts workloads or runs the declared behavior gates.
 
-Go packaging has a deliberately limited format, not a general shell grammar:
-only printable ASCII bytes plus TAB and LF are accepted, including in comments.
-Lines split only on LF; only leading/trailing ASCII spaces and tabs are stripped.
-Blank lines and full-line comments are ignored. The remaining seven commands must
-match `packaging_commands` exactly, including internal whitespace and extraction
-spelling. CR/CRLF, other control bytes, Unicode, continuations, control flow and
-alternate command spellings are rejected rather than normalized or interpreted.
+## Inline Guardian identity
 
-YAML inputs require one mapping document. Before constructing hashes, the Psych
-helper rejects explicit tags other than string tags, resolves implicit scalar
-keys, requires string keys and rejects decoded duplicate keys at every depth.
-Quoted and explicitly tagged strings remain supported; binary, boolean and integer
-tags cannot disguise keys or values. Implicit integer values such as blob sizes
-remain supported. Merge keys, aliases and permitted object classes are not enabled.
+The release must have its fixed team origin and a clean tracked/untracked
+worktree, with no hidden `assume-unchanged` or `skip-worktree` index flags.
+`guardian.tree` must match the committed `040000 tree` entry at the exact inline
+path. A gitlink, nested repository, missing module or symlink source path fails.
+Changing the inline source, including its contracts and tests, requires updating
+that tree identity. The metadata is outside the declared subtree, avoiding a
+self-referential hash. The upstream Garden commit must exist locally.
 
-The Garden and Guardian repository URLs and Guardian `main` branch are fixed
-allowlist values, not metadata-selected trust roots. The command is offline and
-read-only: it neither fetches nor queries a live branch, runs behavior tests, or
-hydrates artifacts. It disables optional Git index writes and ignores inherited
-`GIT_*` environment overrides. Publication and parent adoption are separate checks.
-Neither current branch reachability nor historical patch ancestry is an acceptance
-condition. Equivalent reviewed rebases or squashes can supply new exact revisions;
-the recorded gitlink, initialized HEAD, metadata and review evidence must agree.
+`ported_revision` names the independent Guardian source reconciled during the
+port; it is a historical source reference, not a claimed ancestor of the Garden
+monorepo. Reviewed behavior disposition and executable tests are still needed.
+Merely recording the old commit does not prove that every change was retained.
 
-`behavior_gates` and `downstream_patches` provide structured ownership, revision,
-application-check and executable-test anchors. They identify required acceptance
-work. The verifier confirms that each selector is present in its anchored file,
-but presence does not prove a test ran, passed, or that a source marker provides
-the behavior. In particular, the CREATED-task cleanup gate remains required until
-its separate lifecycle replacement gate passes.
+## Vendored Go identity
 
-The nested Guardian revision is the reviewed immutable
-`2f4941f8ed804d966c6962075b2a84d74a4f88c9`, not a floating branch update.
-The cleanup patch revision is a source reference, not required ancestry or proof
-that cleanup ran. Its declared object must be locally available. The executable
-cleanup gate remains **NOT RUN** here because matching runsc/shim binaries are
-unavailable. The stock Nerd result recorded in Guardian is not runsc acceptance.
-See [the Garden review matrix](CFAR-1522-REVIEW.md) for checks and remaining gates.
+The package name and fingerprint must match `spec.lock`. The matching
+`.final_builds/packages/<name>/index.yml` entry must declare that fingerprint
+and the exact SHA-256 of the hydrated source package. The package must contain
+only the packaging script, compile/runtime environment files and declared Go
+archive. Duplicate, unsafe or non-regular members are rejected without extraction.
+The verifier then checks the inner archive SHA-256 and `go/VERSION`.
+
+For the selected canonical baseline, these are Go **1.27.3**, source-package
+SHA-256 `b49ef5a44acad90bd5e2504d2235a6630c3add2fb7c63848c90c4b46f16f9f83`
+and inner-archive SHA-256
+`65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40`.
+The outer package hash also binds the exact packaging and environment scripts;
+schema 2 does not substitute the old raw-blob packaging grammar for those bytes.
+Missing hydrated bytes remain a failure, never a warning or a metadata-only pass.
+
+YAML parsing retains the single-mapping, duplicate-key, tag, alias and merge-key
+rejections. JSON rejects duplicate keys and unknown fields. Git commands ignore
+inherited `GIT_*` overrides and disable optional index writes.
+
+## Behavior and delivery boundaries
+
+`behavior_gates` and `downstream_patches` retain ownership, source references and
+executable-test anchors. Selector presence does not mean execution or a PASS.
+CREATED-task cleanup7 remains required until its separate live replacement gate
+passes. Historical standalone evidence is not acceptance of this port.
+
+Schema 1 remains implemented and regression-tested for historical standalone
+contracts; its gitlink and raw-Go-blob checks have not been relaxed. The active
+monorepo metadata uses schema 2 and cannot pass through the schema-1 checks.
 
 Exit status `0` means local contract consistency only; `1` means source/artifact
-checks failed; `2` means invalid, missing, duplicate-key or unsupported metadata.
-Missing artifact hydration is a blocking result, never a successful acceptance
-with a warning. The CLI fixtures use disposable repositories and assert literal
-expected output plus unchanged source, Git index, refs and object snapshots.
+checks failed; `2` means invalid or unsupported metadata. A dirty experimental
+worktree deliberately cannot pass full source verification. Fixture tests may
+pass before publication, but do not change that requirement.
 
-This standalone result is not promotion, publication, or adoption proof. The
-release revision is externally bound only when the owning parent repository adopts
-this release through its gitlink. Arbitrary coordinated edits to local metadata,
-toolchain bytes, and verifier code remain visible review changes, but can still be
-self-consistent; checking the release origin and clean worktree does not create an
-external trust anchor. The release revision is therefore not self-declared here,
-because embedding the commit that contains the declaration would also be circular.
-
-`CFAR-1502-PROVENANCE.json` and `scripts/verify-cfar1502.py` are retained unchanged
-as historical evidence. The ticket-specific verifier reproduces its old acceptance
-path but is not the current contract.
+Passing this verifier is not a BOSH compilation, runtime acceptance, publication,
+parent adoption or promotion approval. Coordinated metadata/source edits can be
+self-consistent; reviewed component and parent revisions provide the external
+binding. Keep exact artifact hashes and test environments in the migration ledger.
