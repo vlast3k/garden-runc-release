@@ -64,6 +64,31 @@ those broad selections pass from the scoped results. Case-specific exercise,
 reap and outer bounds are explicit in the script; preserve the caller's complete
 cleanup output and final status.
 
+## Staticfile Repair Fixture
+
+`staticfile-fixture` keeps buildpack 1.6.39, its actual nginx executable and a
+real CF sidecar. The buildpack's deprecated but source-tested custom-config hook
+accepts its token-free nginx.conf. This prevents concurrent profile substitution
+from losing unresolved tokens; it does not fix the buildpack globally. The
+literal port 8080, staged public document root and profile hash were verified
+for these exact t09a fixtures. Do not treat them as portable app defaults.
+
+On native Linux, run `test-staticfile-profile.py --profile-evidence PATH` with
+the original `profile-exact.txt` evidence. It requires the exact recorded profile
+hash and checks its original-token substitutions before 30 serial / 200
+concurrent-pair stability controls. Use a 120-second outer deadline. GNU sed is
+required; the macOS BSD sed attempt fails. Expected existing-FIFO diagnostics
+are distinguished from unexpected utility failures.
+
+`staticfile-matrix.py` and `staticfile-cleanup.py` freeze the two exact disposable
+app GUIDs from this run. They are audit/reproduction inputs, not reusable launch
+commands for new app identities. The matrix requires three 120-second-bounded
+restarts per backend, exact payload and config/profile hashes, HTTP 404 control,
+real sidecar and SSH streams/exit. Cleanup verifies the API hostname, app GUIDs,
+exclusive route destinations and preserved original app GUIDs before deletion,
+then verifies absence and original route bytes. Run only after explicit target
+and identity validation. The completed fixtures have already been removed.
+
 The migration ledger retains the original successful binary hashes and raw-log
 hashes. The Go files here are gofmt-normalized copies of those diagnostic
 sources. Build paths are different, so do not claim binary hash equality without

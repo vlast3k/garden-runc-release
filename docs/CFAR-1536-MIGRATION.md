@@ -2,7 +2,8 @@
 
 Implementation and live validation remain in progress. Repaired source candidate
 `2a7cf010d090b1f8a5fb6e48fe78c106cce9ff9a` is committed on the default-based
-`cfar-1536-canonical-garden` branch, not yet published or reviewed. Native full
+`cfar-1536-canonical-garden` branch, published in draft PR12. Focused critical
+self-review is recorded below; bot review was unavailable due to import size. Native full
 backend gates and clean provenance pass. Its native source release has been
 uploaded and all four t09a cells now use it. Runsc rollback/re-upgrade rehearsal
 and durable regeneration parity pass; landscape commit `6753857` retains the
@@ -760,6 +761,72 @@ Raw `parent-candidate-2a7-linux-v1.log` SHA-256 is
 After reviewed component publication, the exact final parent candidate still
 needs validation; a staged pin does not establish published adoption.
 
+### Repaired Staticfile Fixture and Cleanup
+
+The original generated-config timeout remains a failed attempt. The app-local
+repaired fixture uses the same Staticfile 1.6.39/nginx 1.27.5 and real sidecar,
+not the Go replacement. Pinned buildpack source
+`a9e4a5b9644290b397646abb2bc6ad39a32455cf` implements and tests its custom
+nginx.conf hook in `src/staticfile/finalize`. That hook is deprecated; this is a
+scoped diagnostic fixture, not a global buildpack or production-app change.
+A token-free config removes concurrent runtime substitutions without changing
+Guardian, launcher ordering, the buildpack profile or the sidecar command.
+
+The exact recorded profile `10ea72d2` preserves the repaired config through 30
+serial controls and 200 concurrent pairs on native Linux. Local BSD sed attempts
+failed and do not count as native evidence. Native control log SHA-256 is
+`540b8bcd40274616f3f0c71950934b32148cb14430fed2e75207bb30758cb3b9`.
+The first live fixture returned HTTP 403 because its document root was wrong;
+raw log SHA-256 is
+`338b0f94fb065a78521eadef38b70abcb91896343061289630bd8661d990ea64`.
+Correcting only the root to the actual staged `/home/vcap/app/public` restored
+the unchanged HTTP healthcheck. Stock/runsc pushes took 39/42 seconds under the
+original 120-second bound. An auxiliary unqualified nginx version command
+returned 127; actual staging logs establish nginx 1.27.5.
+
+All six restart cycles pass in 10.438-13.469 seconds: exact HTTPS payload, 404
+negative control, nonzero accounting, real sidecar marker and exact SSH
+stdout/stderr/exit 23. Config SHA-256
+`0ee37c3cb10517063751e0278378f33ab1d0f563f1bcf86280e29674d4ca4ed4`
+and profile SHA-256 remain unchanged after every restart. Raw matrix SHA-256 is
+`9331894f7e545023ee86a3e637719cb2162453397845869054f83c8f4672c375`.
+Exact-GUID cleanup verified exclusive route destinations, deleted both new apps
+and routes, and confirmed the original safe-app GUIDs and exact route payloads
+were preserved. Cleanup log SHA-256 is
+`102eb8d51c8347b9234fa320916df482a2a6e9bccc5ffd2fb47009d737f54a0e`.
+Fixture, matrix and cleanup source are retained in
+`scripts/validation/cfar1536`. This repairs the acceptance fixture, not the
+buildpack's generated-config concurrency defect.
+
+### Advisory Review State
+
+Component draft PR https://github.tools.sap/cp-runtime/garden-runc-release/pull/12
+publishes `e92789de97adc69bcf3530fabed06377edf8d123`. Both `/review+` and the
+documented `/review` fallback rejected the canonical import size: 3000 files /
+404366 changed lines versus 300 / 50000 limits. Neither produced code findings
+or a review verdict; neither is a passing review. Owner instruction on
+2026-10-23: critically assess bot feedback, defer noncritical suggestions and
+act on genuinely critical findings. The size rejection is an advisory tool
+coverage limitation, not a code defect or an acceptance waiver. Stop repeated
+bot requests; continue source-grounded self-review and original required tests.
+
+Focused critical self-review inspected final runtime-options/init-I/O changes,
+stream cancellation/draining, runtime policy, CREATED-task delete and failed
+exec deletion. No new critical defect was identified in that slice. This is not
+exhaustive coverage of the upstream import. Findings are assessed by source and
+actual effects, not bot wording. Existing cleanup7 PID-parent intervention and
+stream Close waiting remain retained contracts, not newly certified universal
+boundedness guarantees; their recorded native and packaged fault tests apply.
+
+| Review angle | Source-grounded disposition for inspected slice |
+| --- | --- |
+| Failure/correctness | Runtime options attach to container creation; failed exec Start attempts Delete and joins cleanup errors; runsc CREATED cleanup is explicit |
+| Integrity/consistency | Only closed output-pipe writes are drained; other write errors and tar Wait/exit errors remain visible; runtime config/profile hashes are measured |
+| API/concurrency | Pinned typed runtime options are decoded in native controls and observed on installed tasks; stderr uses a mutex and reader Close is guarded by sync.Once |
+| Performance/security | Policy resolved once; unsupported runtime types reject startup; CREATED shim intervention is limited to runsc and checks parent comm, with retained cleanup7 identity risks not expanded |
+| Operability/coupling | Exec/delete errors retain context; exact pinned parser/toolchain and matched runtime artifacts are required; raw diagnostic failures remain visible |
+| Maintainability/fail-open | No new abstraction changes requested for style; missing config roots/inventories and provenance dirt fail closed; helper coverage is not substituted for live behavior |
+
 ## Required Acceptance Remaining
 
 ### Current Self-Audit
@@ -771,7 +838,7 @@ The completion-audit failure-mode catalog was assessed as follows:
 
 | Modes | Disposition / discriminating evidence |
 | --- | --- |
-| 1, 13, 19 scope, thresholds, authority | OPEN: original Staticfile failure and final reviewed adoption are retained below; no owner exception, criterion waiver or Jira closure is inferred |
+| 1, 13, 19 scope, thresholds, authority | Final adoption remains OPEN; original Staticfile failure is retained with the later fixture repair and six-cycle validation below; no owner exception, criterion waiver or Jira closure is inferred |
 | 2, 4 selected owner and real caller | Verified for recorded subsets: actual Nerd backend, pinned official Garden caller, installed typed runtime options, real kernel OOM/event and effective parser checks; fake-backed streaming tests remain labelled local evidence |
 | 3, 5, 6 selected tests, controls and predicates | Native 48/47 counts, exact bytes/status, independent OOM, invalid parser controls and per-mode mixed postconditions are recorded; stock alternative-only spec is N/A, not PASS |
 | 7, 15 partial state and tool wrappers | V1 orphan inventory failed closed on absent root; V2 actual TOML inventory and raw log pass. Empty tool captures were recovered from persisted files; rc alone was not used as evidence |
@@ -785,10 +852,22 @@ The completion-audit failure-mode catalog was assessed as follows:
 
 | Finding | Original criterion | Disposition / next discriminating check |
 | --- | --- | --- |
-| F1536-1 original Staticfile/sidecar startup | AC6 restart behavior | OPEN: preserve timeout/profile logs, verify a deterministic app-local repair or source-grounded external-fixture classification; do not repeat unchanged intermittent repro attempts |
+| F1536-1 original Staticfile/sidecar startup | AC6 restart behavior | REPAIRED AND REVALIDATED: app-local stable config, exact native profile controls, six real Staticfile/nginx restart cycles and scoped cleanup pass; original generated-config failure retained, not relabelled PASS |
 | F1536-2 exact final parent candidate | AC4, AC7 | OPEN: prospective pin gate now passes; validate the eventual reviewed parent revision after component publication |
-| F1536-3 reviewed component/default adoption | AC1, AC7 | OPEN: publish draft with exact tested runtime tree, review complete current-head findings, repair/revalidate before merge and parent pin adoption |
+| F1536-3 reviewed component/default adoption | AC1, AC7 | OPEN: draft PR12 published; both bot modes size-rejected without findings; focused critical self-review found no new critical defect; complete source/criterion reconciliation before merge and parent pin adoption remains |
 | F1536-4 reproducible diagnostics | AC3, AC7 evidence | REPAIRED AND REVALIDATED: sources retained outside Guardian runtime tree; resource race controls pass, parser cross-build passes, source comparison, Python compilation and Bash syntax checks pass |
+
+Cleanup mapping: native runsc full-suite spec `deletes a created
+alternative-runtime task using the required shim cleanup` captures exact
+shim/task/gofer and descendants (including argv-free sentry descendants) before
+Delete; it rejects missing identities and requires each PID/start-time identity,
+including zombies, to disappear within ten seconds before enclosing teardown.
+Its AfterEach separately removes the bundle and asserts exact containerd
+metadata absence. The stock-only N/A is this runsc-specific spec, exercised by
+runsc's full 48-test pass. Packaged mixed tests cover live-parent exec/I/O
+cleanup before container teardown; the separate post-destroy inventory is not
+used as a substitute for either predicate. This mapping does not claim every
+possible untested runtime failure has no residue.
 
 | Criterion | Status | Required next evidence |
 | --- | --- | --- |
@@ -797,7 +876,7 @@ The completion-audit failure-mode catalog was assessed as follows:
 | AC3 package/config/provenance agreement | NOT RUN as a complete criterion | Native BOSH compilation, clean candidate provenance and exact installed stock/runsc parser controls pass; final source/publication reconciliation remains |
 | AC4 component and parent regressions | NOT RUN as a complete criterion | Final native Nerd/focused/race suites and prospective `2a7cf010` parent --linux gate pass; final published parent candidate validation remains |
 | AC5 new stock Garden with unchanged Diego/Rep | PASS for exercised compatibility | Both stock cells retain exact Rep hashes; staging, HTTP healthcheck, proxy/sidecar, three SSH cycles and 30-minute route soak pass with unchanged Diego 2.138.0; whole-task acceptance is separate |
-| AC6 live matrix/soak/rollback | NOT RUN as a complete criterion | Final all-cell rollout, rollback/re-upgrade, permanent pin, six safe-fixture restarts, full 30-minute soak, ASG, enforcement and mixed fault checks pass; complete orphan mapping and original Staticfile disposition remain |
+| AC6 live matrix/soak/rollback | NOT RUN as a complete criterion | Final all-cell rollout, rollback/re-upgrade, permanent pin, six safe-fixture and six repaired real-Staticfile restarts, full 30-minute soak, ASG, enforcement and mixed fault checks pass; complete orphan mapping remains |
 | AC7 reviewed publication and parent adoption | NOT RUN | Exact reviewed component/default revision, parent pin and tested-tree comparison |
 
 Stock diagnostic cell was `cf_cells_1`,
