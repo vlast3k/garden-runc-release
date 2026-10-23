@@ -13,7 +13,26 @@ Native builds and local contracts do not establish live compatibility.
 | Team default fetched during work | `bee74aabb8b8ff70d78042394c2e2e6b2b740f96` |
 | Previously packaged Guardian | `b55c6c6df4b9c78b70136c7597a5ccf92035d449` |
 | Independent Guardian port input | `e4e266e0dad0e2957f5920b927a7f86776f447ff`, compared with `5852620c` |
-| Inline Guardian tree including restored contracts and canonical patch-test fixture | `eafb22cd3423f21a757df1be009419098d08e0fa` |
+| Inline Guardian tree including restored contracts and Git-free compiler verification | `d66fc7838ccaf9bbadeadb258182fbc587fadff0` |
+
+### Native BOSH Compilation Attempt
+
+Source checkpoint `2a4305fc313a6b04728144dff4bd7d0813738a69` produced
+`garden-runc/1.103.0-cfar1536.2a4305fc`, archive SHA-256
+`090a8538ee95467046f25af8ef4946bc3e7ec9d6764d0971e19aa1d48653a739`.
+Upload task `78714` and stock manifest dry-run `78723` passed on t09a.
+Canary task `78752` failed during Guardian compilation, before instance updates:
+`script/apply-garden-stream-patch.sh: line 16: git: command not found`.
+The temporary hold on stock control `d9556df9-c219-48b5-846b-ecb70c4c6f88`
+was removed after this failed attempt. This attempt does not establish runtime
+compatibility or acceptance.
+
+The applicator now verifies exact SHA-256 identities of both the already-patched
+handler and patch when Git is absent. It cannot apply an unpatched handler in
+that environment and fails closed on altered or incompatible inputs. The actual
+script passes restricted-PATH tests for standalone, nested and archive layouts,
+including those three negative controls. Git-based source application remains
+unchanged. Native BOSH compilation must be rerun on the repaired commit.
 | Go source package fingerprint | `803d6abe1fb7886295f7a5a3a0a47b6d51c577af33635c2bb5e0cbfe0a11365a` |
 | Go source package SHA-256 | `b49ef5a44acad90bd5e2504d2235a6630c3add2fb7c63848c90c4b46f16f9f83` |
 | Inner Go 1.27.3 linux/amd64 archive SHA-256 | `65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40` |
