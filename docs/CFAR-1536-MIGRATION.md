@@ -1,11 +1,15 @@
 # CFAR-1536 Migration Ledger
 
-Implementation and live validation remain in progress. Source candidate
-`74005dfa8e747d91fa8955fd627b0f79177f1f98` is committed on the default-based
-`cfar-1536-canonical-garden` branch, not yet published or reviewed. Its release
-has been uploaded and deployed to both stock and both runsc cells. Persistent
-landscape regeneration now exactly matches both deployed manifests. Required
-acceptance and reviewed source/parent adoption remain incomplete.
+Implementation and live validation remain in progress. Repaired source candidate
+`2a7cf010d090b1f8a5fb6e48fe78c106cce9ff9a` is committed on the default-based
+`cfar-1536-canonical-garden` branch, not yet published or reviewed. Native full
+backend gates and clean provenance pass. Its native source release has been
+uploaded and all four t09a cells now use it. Runsc rollback/re-upgrade rehearsal
+and durable regeneration parity pass; landscape commit `6753857` retains the
+final version. Resource enforcement/accounting and ASG controls pass on both
+backends. Final 30-minute soak and three mixed fault-matrix repetitions pass.
+Required full criterion reconciliation and reviewed source/parent adoption
+remain incomplete.
 
 ## Exact Inputs
 
@@ -17,6 +21,7 @@ acceptance and reviewed source/parent adoption remain incomplete.
 | Previously packaged Guardian | `b55c6c6df4b9c78b70136c7597a5ccf92035d449` |
 | Independent Guardian port input | `e4e266e0dad0e2957f5920b927a7f86776f447ff`, compared with `5852620c` |
 | Inline Guardian tree including restored contracts and Git-free compiler verification | `d66fc7838ccaf9bbadeadb258182fbc587fadff0` |
+| Final repaired inline Guardian tree, source candidate `2a7cf010` | `26b9f00d4f64d99cea6c4688394f9997971cacf3` |
 
 ### Native BOSH Compilation Attempt
 
@@ -50,7 +55,9 @@ Preserve team-default changes during default-based integration and review.
 
 Paths below are under `src/code.cloudfoundry.org/guardian` unless stated
 otherwise. Classification compares canonical `90175b24` with candidate
-`74005dfa`; test names and source presence alone do not establish execution.
+`74005dfa`, plus the explicit `2a7cf010` runtime-options, init-I/O and
+cancellation-drain repairs recorded below. Test names and source presence alone
+do not establish execution.
 
 | Integration contract | Disposition | Exact owning source / retained test anchor |
 | --- | --- | --- |
@@ -65,7 +72,7 @@ otherwise. Classification compares canonical `90175b24` with candidate
 | gVisor V1 exact ID | Unchanged external component | Parent gVisor pin `34a45484ba288254b0535499f1e5f33c3416b539`; `state_file_exact_match_cf_gate_test.go` |
 | gVisor V2 missing parent | Unchanged external component | Same immutable gVisor pin; `state_file_missing_parent_cf_gate_test.go` |
 | gVisor V4 peer addresses | Unchanged external component | Same immutable gVisor pin; `network_peer_addr_cf_gate_test.go`; Silk/loopback remain integration acceptance inputs |
-| CPU topology cap | Unchanged external runtime plus preserved render; task propagation repair required | Same runtime hashes; rendered cap 2 alone did not prove use by tasks. The uncommitted Container.Runtime.Options repair below proves actual cap-2 argv in the private probe, not yet in the deployed Garden; not a hard bandwidth claim |
+| CPU topology cap | Unchanged external runtime plus preserved render and task propagation repair | Same runtime hashes; candidate `2a7cf010` preserves Container.Runtime.Options. Final packaged fresh CF sandbox has the typed options and actual cap-2 argv recorded below. This proves propagation, not a hard bandwidth limit or a cap discriminator on two-vCPU hosts |
 | Authoritative release config | Required BOSH port | `jobs/garden/spec` and owned templates, Garden RSpec; runtime pre-start remains unchanged and performs no cross-job Garden config rewrite |
 
 Independent Guardian changes from packaged `b55c6c6d` to parent `e4e266e0`
@@ -75,8 +82,8 @@ configuration. Committed `74005dfa` production streamer is byte-identical to the
 independent input. Its acceptance fixtures differ only by `fixtureCommand`, which
 resolves host `/bin/tar` and `/bin/mkdir` through PATH on Nix OCI. Container
 production executable paths and assertions are unchanged at that checkpoint.
-The subsequent uncommitted cancellation-drain repair below changes both files;
-it has not yet been rebuilt into the deployed release.
+The subsequent cancellation-drain repair below changes both files and is
+committed in `2a7cf010`; its packaged release is installed on all four cells.
 
 | Check / expected predicate | Actual | Evidence level |
 | --- | --- | --- |
@@ -467,7 +474,8 @@ Both used that identical binary and reported cleanup 0.
 Stock v3, on the preceding `8ae423a2` binary, passes all 47 applicable specs in
 280.020 seconds; one explicit alternative-runtime-only spec is skipped and
 cleanup is 0. It does not establish the final fixture/collector candidate.
-These source repairs are still uncommitted and absent from deployed Garden.
+These were uncommitted and absent from deployed Garden at that attempt. They
+are now committed in `2a7cf010` and exercised on the final packaged canaries.
 
 | Raw log under `gen/cfar1536/` | SHA-256 |
 | --- | --- |
@@ -512,8 +520,9 @@ selection passed on this source before the two full gates.
 | `final-focused-native.log` | `316b17545346f0849edbb6b5ce50c0b56c888fbb529cd7b9ee643ef19a8f6045` |
 | `final-streaming-race-native.log` | `6cd250d27b3b184488a6dd57da7c426e873dfa97fc766fb111a223afa887fb35` |
 
-These are component-native results, not acceptance of the deployed release.
-The live checkpoint remains `1.103.0-cfar1536.74005dfa`, without these repairs.
+These are component-native results, not whole-task acceptance of the deployed
+release. The durable version is now `1.103.0-cfar1536.2a7cf010`; final packaged
+progress is recorded below.
 Earlier failed attempts remain applicable to their original candidates and are
 not erased by the final passes. A local provenance rerun was interrupted by
 terminal reuse; a local rendering rerun stopped before tests because the shell
@@ -525,16 +534,270 @@ failed, and a run without that preload confirmed the actual dependency in
 exposing its lib directory through RUBYOPT restored the unchanged renderer:
 86 examples, zero failures. No Gemfile dependency or system gem was changed.
 
+### Final Packaged Canary Progress
+
+Source commit `2a7cf010d090b1f8a5fb6e48fe78c106cce9ff9a` freezes the tested
+Guardian tree. The final renderer also passes 86 examples using the preexisting
+host-specific test bundle with BUNDLE_FROZEN=true; the release lockfile remains
+unchanged. A frozen run against the release lockfile itself rejected the local
+Darwin-25 platform before examples, which is retained as an environment attempt.
+
+The first native clean provenance attempt rejected a missing canonical upstream
+object: the feature-branch bundle did not contain the separately imported,
+non-ancestor `90175b24` history. Supplying its complete actual Git object history
+fixed that input gap without changing source or assertions. Clean native
+verification then passed for source `2a7cf010`, inline tree `26b9f00d`, exact
+Go source package and canonical upstream identity. The first 138 MiB history
+upload exceeded its 150-second request deadline while making chunk progress;
+cancellation stopped the child and the destination was verified absent. A
+fresh size-appropriate 600-second transfer passed all 14 chunk checks and final
+SHA-256. This is bounded transport recovery, not a runtime gate PASS.
+
+Native `bosh create-release --force --version 1.103.0-cfar1536.2a7cf010`
+created the archive with SHA-256
+`fdf4a145410358c4dc60ffa550df62d930ae6abaaaa7f8c1c5fdc05836222ef5`.
+Fresh private manifests, all four exact healthy identities and no active BOSH
+writer were verified before upload task `80335`. Actual parsed candidate
+manifests differ only in the Garden release pin. Diego `2.138.0`, runsc release
+`0.6.0-cfar1529.1`, all properties and two instances per shard are unchanged.
+
+Task `80338` compiled Guardian package
+`a6a4a6ed49206c0fbe784b5fa10d257b04b35caa0c3f5e7cdf075298a640df16`
+and updated only stock canary `178aba96` with normal drain. Its control `d9556`
+was unignored immediately afterward. Task `80386` updated only runsc canary
+`02728eb7`, also with normal drain; control `998d2002` was likewise unignored.
+Installed Guardian matches on both canaries:
+`699db693f05eab651561cfde95a02a648cd527134c5b0b79d5bd9da5b8a09311`.
+Rep remains
+`170444ea493b46d295a8984862feae4890701cde1a7b423ad8de44d6410bc963`.
+The runsc/shim/sentry hashes remain the exact values above; matched prewarmer is
+`3315d7ad7c2d3751d349e4976fa02da1da6fd7e41746c35622304e5fabe4fce0`.
+The initial hash probe incorrectly used a bin/ prefix and failed for two paths;
+the packaging-grounded package-root probe passed. It is not a missing-artifact
+failure or a waived runtime gate.
+
+The same official Garden caller binary `16ad7c24` passed three consecutive
+lifecycle checks on each final canary, each with a 120-second outer timeout,
+five-second escalation and separate 30-second phase/cleanup bounds: exact exec
+exit 23/stdout, normal-file archive payload and restored handle inventory.
+Runsc additionally passed the full unchanged archive oracle, including literal
+leading-dash and space paths, malformed-input and missing-path controls and
+subsequent successful control archives. This does not waive inherited stock
+leading-dash Nstar behavior or establish ASG/resource enforcement.
+
+Raw deployment logs and repeated caller logs are under
+`gen/cfar1536/final-rollout-2a7cf010/`. Runsc rollback task `80420` restored
+`74005dfa` and its exact Guardian hash; re-upgrade task `80430` restored the final
+hash. Fresh lifecycle sandboxes passed after both directions with normal drain.
+Tasks `80464` and `80500` then updated stock control `d9556` and runsc control
+`998d2002` sequentially with normal drain. All four cells use final Guardian
+`699db693`; no cells remain ignored. Stock control caller initially lacked its
+helper (exit 127); dedicated executable data staging repaired that prerequisite
+and the lifecycle retry passed. Final runsc control lifecycle passed three
+repetitions on 2026-10-23 at approximately 16:57 UTC.
+
+Landscape commit `6753857e3389cce0144a9b8dc341282b7a9c1e3e` changes only
+`config.garden_release_version`, is pushed, and preserves final Garden on
+regeneration. Actual parsed whole-manifest equality passes for both shards,
+not merely release-list equality. `create_manifest` emits without persisting;
+the shard-owned `deploy_cf_cells --dry-run --shard` writes each shard and clears
+the common output directory, so each generated file was frozen before rendering
+the next. The first parity attempt failed for the removed first file; frozen
+per-shard parity passes. Raw `regeneration-parity-final.json` SHA-256 is
+`522400b5d4cdf703dd6bd691de1ab4a21966d1e496daf4597aeb6e7745b3655d`.
+
+### Final CF Fixture and Enforcement Results
+
+The original Staticfile 1.6.39 plus sidecar matrix passed three stock and two
+runsc restart cycles, then failed its third runsc cycle at the declared
+120-second deadline: nginx retained `((LISTEN_DIRECTIVE))` in its config. Both
+web and sidecar source the same staged profile and mutate that config. The
+actual profile SHA-256 is
+`10ea72d238ef6be86adeb13d7e8b52dc34e478ecf5f835ae2bb145a0a17a0a43`.
+Three bounded profile-race reproducer attempts retained all serial controls;
+one concurrent attempt exposed an unresolved token, while the other two did
+not reproduce it. This is intermittent evidence, not a deterministic universal
+root-cause proof. Original matrix and logs remain under `final-cf-matrix-v1/`;
+the original Staticfile case is not relabelled PASS.
+
+A sidecar-safe diagnostic Go HTTP fixture preserves exact payload, 192 MiB
+memory/512 MiB disk, 32 MiB sidecar, routes, HTTP healthcheck, proxy and SSH
+assertions. Its local handler test includes exact root payload and missing-path
+404 controls and passes with the race detector. Both pushes completed within
+120 seconds; explicit route remapping repaired the fixture's `--no-route`
+removal of old routes. Final matrix v2 passes all six fresh restart cycles
+(three per backend, approximately 13.2-13.7 seconds each), exact HTTP bytes,
+sidecar marker, SSH exit 23 with exact streams, DNS and nonzero metrics. Matrix
+SHA-256 is `85f132c140b3e40670f02aa8bbc6e9043d2f008f7b4f8d5d937a3e1e1ecc0002`.
+The replacement does not clear the original Staticfile limitation.
+
+Fresh CF runsc sandbox `6c43890d-3727-4c78-44e1-6a36` has actual runtime
+`io.containerd.runsc.v1`, typed `runtimeoptions.v1.Options` carrying
+`/etc/containerd/runsc/config.toml`, and actual sandbox argv including
+`--sandbox-cpu-num-cap=2`, `--cpu-num=2`, `--network=sandbox`, `--directfs=false`
+and `--overlay2=none`. Both stock and runsc reporting nproc=2 alone is not a
+cap discriminator on these two-vCPU hosts. This is not a CPU bandwidth claim.
+
+ASG checks pass on both backends: public HTTPS exact payload succeeds; each
+opposite cell's private TCP/22 target is reachable from the host; three bounded
+sandbox connections to that same target are rejected. The exact per-container
+ASG REJECT counter increases from 0 to 3 on each backend. No ASG policy changed.
+Raw `final-asg-v1.log` SHA-256 is
+`2c91bde36b113ff08315e26b7c3eaf57ca6f15a2de1a854c7506c0ad299b02bc`.
+
+Resource probe v3 uses the official pinned Garden client and exact Linux binary
+`d8c0ad07a98b2170f92d7664696dbe04f419a7623010e5fb88cd32759d387ebd`.
+Declared disposable-container limits are 384 MiB memory and 128 MiB exclusive
+disk, outer bound 150 seconds plus five-second kill escalation. Positive held
+64 MiB allocation, 16 MiB write and five-second busy loop produce asserted
+memory/disk/CPU counter increases on both backends. A bounded 256 MiB write
+fails with ENOSPC at 134152192 bytes. A 768 MiB allocation increments only the
+owned cgroup's `oom_kill` counters 0 -> 1 and emits Garden `Out of memory` on
+both backends. Stock exec reports 137; runsc exec reports 128 with WaitPID EOF.
+Pinned shim `proc.InternalErrorCode` and `checkProcesses` explain the latter:
+OOM normalization to 137 applies to init, not exec. The oracle requires that
+exact backend-specific signature AND independent cgroup increase AND Garden
+event; unrelated errors, missing/wrong cgroups and successful allocation are
+rejected in local race-tested controls. Both destroys and exact handle inventory
+restoration pass. Raw log hashes:
+
+| Resource attempt | SHA-256 / disposition |
+| --- | --- |
+| `resource-stock-v3.log` | `f692733f2f03b84a3fb427e2702964dfcce8664bc2cc556cb6be0d7c101b084b`, PASS |
+| `resource-runsc-v3.log` | `14d38b7ae9a853a9a3b9784f2337c34d8828419d848ca630483c26c6d4d1e5e9`, PASS |
+| v1 unsupported `preloaded:` image URI | FAIL before create; GrootFS nil transport panic, handle absent. Source-proven empty-scheme installed rootfs tar repairs fixture input, not quota thresholds |
+| runsc v2 universal exit-137 oracle | FAIL; retained raw EOF/128 result and successful cleanup. v3 independent kernel/event assertions establish actual OOM rather than accepting generic 128 |
+
+Final packaged per-container cancellation and late-exit checks each pass three
+repetitions with exact exec identity, live parent, post-fault control archive
+and cleanup. The older host-global early-close check rejects occupied baselines
+of 5 and 51 execs on the two runsc cells; it is not passed or weakened. Staging
+first selected a stale generic helper, then the exact `garden-client-lifecycle`
+binary `16ad7c24`; the prefix guard also rejected an initial unqualified handle.
+These prerequisite attempts are preserved. The first mixed run used an invalid
+40-second launcher budget against its existing 80-second grace baseline and
+failed before cycles; a source-grounded 360-second exercise/420-second outer
+runner passes three repetitions, with all original assertions unchanged. Each
+repetition runs three cycles of archive/cancel/late-exit against one parent plus
+an independent control parent, for 27 mode cycles overall. Exact parent identity,
+exec disappearance, I/O, handlers, FD/goroutine/grace settling and final handle
+cleanup pass before teardown. Raw mixed log SHA-256 is
+`8fc3a12b0a1463f02e48b92d21b3830e4b948900163eee74aa19576d6f91f170`.
+Raw scoped
+log `stream-runsc-scoped-final-v2.log` SHA-256 is
+`8813a81bb58c01e9615dd5e73a4eec0ea49b311c82c0e8905512bd5f344ff89f`.
+
+The final route soak passes its full declared 1800-second window: elapsed
+1800.070181 seconds, 181 samples, 362 requests, zero non-200 results, and every
+response has exact payload SHA-256
+`80097eecb2a798755b10bc1d4b0056e27654d9aa980205e0e80a5ada497006a2`.
+Raw `route-soak-final-2a7cf010-v1.jsonl` SHA-256 is
+`045d0644dc93f4287675fc4a87230b92572db09fbada59c4cb55295043ee1f07`.
+Post-test BOSH JSON reports all four exact cells running; landscape HEAD remains
+`6753857` with clean worktree. Attempted t09a-only hibernation deferral failed before
+EventBridge mutation: IaC rc 113, Terraform root_user STS 403
+`InvalidClientTokenId`. Timer state remains unverified and was not described as
+disabled. The failure is retained; no blind credential/action retry was made.
+
+### Exact Installed Parser and Residue Checks
+
+Reproducible probe sources and local build/control commands are retained under
+`scripts/validation/cfar1536/`; they are outside the shipped Guardian tree.
+
+Config probe v3 imports the actual candidate `guardiancmd.GdnCommand`,
+`ServerCommand`, go-flags INI parser and GrootFS config builder. It never
+executes the server. Binary SHA-256 is
+`dccbf3eaa34aeb3533a200d05853dadaebe68cc086df7d5974853cb0a6841a75`.
+Four controls accept explicit stock/runsc settings and reject an unknown
+property and invalid boolean. Both installed stock and runsc config checks
+pass within 20 seconds. Stock runtime type is empty, containerd process handling
+is false, and both GrootFS quota exclusions are false; runsc selects
+`io.containerd.runsc.v1`, true process handling and true exclusions. These match
+the Garden job-level manifest properties, not unrelated instance-group keys.
+Raw `config-stock-v3.log` SHA-256 is
+`ffaf0906f360924ab07b204c8f1d07cb4ba0d2bb398169fd54650ba19b0c467a`;
+`config-runsc-v3.log` is
+`765e288463f1d43f19405c3410d61debc13514432bed0256e1c975d7f2a44bd5`.
+V1's nil command initialization panic and v2's incorrect stock quota expectation
+remain failed diagnostic attempts; neither changed installed configuration.
+
+After the fault matrix, a separate read-only audit on runsc control `998d2002`
+requires no owned containerd task or metadata, runtime argv, depot bundle, runsc
+state or cgroup residue and no inventory read errors. It parses the actual
+containerd TOML `state` path and has a 30-second outer bound. V2 passes with all
+five inventories empty. Source SHA-256 is
+`92669e2f495919cc842ce5dec760daf936bb2e30de8559062c4a35f6492936c9`;
+raw `orphan-runsc-control-v2.log` SHA-256 is
+`c69dab3fa9718bde32e3efe58d32b78c1a17723ee21110858dee2e66dc36ccd7`.
+V1 failed closed on a generic runtime-v2 state path; the actual installed state
+root is `/var/vcap/sys/run/containerd/state`, not `/run/containerd`.
+This is post-destroy residue evidence only. It does not replace native
+pre-delete PID/start-time identities or mixed-matrix exec/I/O cleanup before
+teardown, and argv inventory alone cannot identify an argv-free sentry stub.
+
+### Prospective Parent Pin Native Gate
+
+The prospective `2a7cf010` Garden gitlink passes
+`bash scripts/verify-project.sh --linux` on native Noble x86_64, Go 1.27.3,
+Ruby 3.2.3. This is an isolated diagnostic parent checkout at `fda47b8`, with
+the six declared caller/regression overlays recorded above and the new Garden
+gitlink staged in its index, not a merged parent revision. The active parent
+worktree and index were untouched. All four submodules match the diagnostic
+index; exact overlay file hashes are printed in the log.
+
+Ruby counts are 8 runs/48 assertions and 5 runs/52 assertions, no skips or
+failures. Both actual Go race/vet suites and real process/socket cleanup pass.
+Bazel executes the actual `//pkg/shim/v1/proc:proc_test`, 1/1 PASS in 3.3 seconds,
+with `--nocache_test_results`. Component release gates are explicitly separate;
+this command does not run `--release` or replace the native Nerd results.
+Private cross-compiler overlay and tmpfs mounts disappear with the namespace;
+the host cross compiler is absent afterward. The launcher uses an exclusive
+diagnostic writer lock and a 1900-second outer bound; its trap removes the lock.
+Frozen launcher SHA-256 is
+`52af718ce6146a9efc45e81598c4d6c44e7fe1063e1b939b3fc40bab81ab4b8a`.
+Raw `parent-candidate-2a7-linux-v1.log` SHA-256 is
+`31ecb10ce178f37e70d9682a3551d5ed9c8a8adc65adebf0361da933c966ebe4`.
+After reviewed component publication, the exact final parent candidate still
+needs validation; a staged pin does not establish published adoption.
+
 ## Required Acceptance Remaining
+
+### Current Self-Audit
+
+This is disclosed agent self-review, not independent approval. Runtime source
+remains `2a7cf010`, inline tree `26b9f00d`; subsequent evidence/diagnostic edits
+do not alter the shipped Guardian tree or installed artifact identities.
+The completion-audit failure-mode catalog was assessed as follows:
+
+| Modes | Disposition / discriminating evidence |
+| --- | --- |
+| 1, 13, 19 scope, thresholds, authority | OPEN: original Staticfile failure and final reviewed adoption are retained below; no owner exception, criterion waiver or Jira closure is inferred |
+| 2, 4 selected owner and real caller | Verified for recorded subsets: actual Nerd backend, pinned official Garden caller, installed typed runtime options, real kernel OOM/event and effective parser checks; fake-backed streaming tests remain labelled local evidence |
+| 3, 5, 6 selected tests, controls and predicates | Native 48/47 counts, exact bytes/status, independent OOM, invalid parser controls and per-mode mixed postconditions are recorded; stock alternative-only spec is N/A, not PASS |
+| 7, 15 partial state and tool wrappers | V1 orphan inventory failed closed on absent root; V2 actual TOML inventory and raw log pass. Empty tool captures were recovered from persisted files; rc alone was not used as evidence |
+| 8, 9 external semantics and time budgets | Pinned shim exec-128 semantics require independent OOM; mixed grace required a source-grounded larger launcher bound, preserving failed attempt; final route soak measured its full 1800 seconds |
+| 10, 11 identity and cleanup | Exact native PID/start-time checks and pre-teardown mixed exec/I/O checks complement the separate owned-prefix post-destroy audit; argv-free sentry cannot be cleared by that audit alone |
+| 12 environment failures | Native compile, helper hash/staging, parser initialization, quota expectation and parent toolchain failures are retained with prerequisite repairs and reruns; no missing tool is counted as a successful behavior test |
+| 14, 16 raw and conflicting evidence | Raw log hashes retained; old checkpoints distinguish prior source from final release; stale CPU, deployment and old-pin parent claims corrected. Full original Staticfile case remains FAIL |
+| 17 candidate identity | Runtime `2a7cf010`, test binary `3117b709`, installed Guardian `699db693` and matched runtime artifacts are distinct identities; diagnostic source copies were compared with successful originals |
+| 18 publication/adoption | OPEN: no reviewed component default merge or parent adoption yet; prospective staged-pin validation is explicitly not a merged parent revision |
+| 20 audit theater / bounded loop | Subagent claims about missing pea/stdin/cleanup were rejected against actual native source/results; its stale fixture-location result was not used. Review is advisory, not executable evidence or merge permission |
+
+| Finding | Original criterion | Disposition / next discriminating check |
+| --- | --- | --- |
+| F1536-1 original Staticfile/sidecar startup | AC6 restart behavior | OPEN: preserve timeout/profile logs, verify a deterministic app-local repair or source-grounded external-fixture classification; do not repeat unchanged intermittent repro attempts |
+| F1536-2 exact final parent candidate | AC4, AC7 | OPEN: prospective pin gate now passes; validate the eventual reviewed parent revision after component publication |
+| F1536-3 reviewed component/default adoption | AC1, AC7 | OPEN: publish draft with exact tested runtime tree, review complete current-head findings, repair/revalidate before merge and parent pin adoption |
+| F1536-4 reproducible diagnostics | AC3, AC7 evidence | REPAIRED AND REVALIDATED: sources retained outside Guardian runtime tree; resource race controls pass, parser cross-build passes, source comparison, Python compilation and Bash syntax checks pass |
 
 | Criterion | Status | Required next evidence |
 | --- | --- | --- |
 | AC1 revisions and complete delta disposition | NOT RUN as a complete criterion | Partial source evidence above; full delta reconciliation and default-based review remain |
-| AC2 retained lifecycle/pea/stream/metrics/network/runtime behavior | NOT RUN as a complete criterion | Final full native runsc 48/48 and stock 47 applicable specs pass with cleanup 0; complete metrics/enforcement mapping remains |
-| AC3 package/config/provenance agreement | NOT RUN as a complete criterion | Native BOSH compilation and clean candidate provenance pass; complete effective parser/artifact mapping remains |
-| AC4 component and parent regressions | NOT RUN as a complete criterion | Parent and native --linux pass for existing pins/declared overlays; final-candidate component suites and future Garden-pin verification remain |
+| AC2 retained lifecycle/pea/stream/metrics/network/runtime behavior | NOT RUN as a complete criterion | Native backend gates, final lifecycle/archive, ASG, enforcement/accounting and cancel/late-exit/mixed pass; complete contract and orphan mapping remains |
+| AC3 package/config/provenance agreement | NOT RUN as a complete criterion | Native BOSH compilation, clean candidate provenance and exact installed stock/runsc parser controls pass; final source/publication reconciliation remains |
+| AC4 component and parent regressions | NOT RUN as a complete criterion | Final native Nerd/focused/race suites and prospective `2a7cf010` parent --linux gate pass; final published parent candidate validation remains |
 | AC5 new stock Garden with unchanged Diego/Rep | PASS for exercised compatibility | Both stock cells retain exact Rep hashes; staging, HTTP healthcheck, proxy/sidecar, three SSH cycles and 30-minute route soak pass with unchanged Diego 2.138.0; whole-task acceptance is separate |
-| AC6 live matrix/soak/rollback | NOT RUN as a complete criterion | Staging, routes, SSH/sidecar, six restarts and full 30-minute soak pass for checkpoint; final repair release, enforcement/failure cleanup, ASG controls and rollback remain |
+| AC6 live matrix/soak/rollback | NOT RUN as a complete criterion | Final all-cell rollout, rollback/re-upgrade, permanent pin, six safe-fixture restarts, full 30-minute soak, ASG, enforcement and mixed fault checks pass; complete orphan mapping and original Staticfile disposition remain |
 | AC7 reviewed publication and parent adoption | NOT RUN | Exact reviewed component/default revision, parent pin and tested-tree comparison |
 
 Stock diagnostic cell was `cf_cells_1`,

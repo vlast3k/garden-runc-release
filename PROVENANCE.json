@@ -47,7 +47,7 @@
           "selector": "deletes a created alternative-runtime task using the required shim cleanup"
         }
       ],
-      "limitation": "Native Linux full Nerd gate passes for this inline Guardian tree: runsc 48/48 with no skips and stock 47/48 with one alternative-runtime-only skip; both cleanup_rc=0. Binary SHA-256 3117b7094f5b8225a1b2506348c76d1af0345019ad6ac3ddb921f77c395615c5. Exact commands, retained failed attempts and raw log hashes are in docs/CFAR-1536-MIGRATION.md. Final release deployment and complete CF acceptance remain unverified; metadata is not runtime acceptance or approval to remove cleanup7."
+      "limitation": "Native Linux full Nerd gate passes for this inline Guardian tree: runsc 48/48 with no skips and stock 47/48 with one alternative-runtime-only skip; both cleanup_rc=0. Binary SHA-256 3117b7094f5b8225a1b2506348c76d1af0345019ad6ac3ddb921f77c395615c5. Exact commands, retained failed attempts and raw log hashes are in docs/CFAR-1536-MIGRATION.md. Final native release is installed on all four t09a cells and rollback/re-upgrade passes. Complete CF acceptance and reviewed parent adoption remain unverified; metadata is not runtime acceptance or approval to remove cleanup7."
     }
   ]
 }
