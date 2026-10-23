@@ -107,7 +107,7 @@ func (s *ExecStreamer) StreamOut(log lager.Logger, handle string, spec garden.St
 		Path: "/bin/tar",
 		Args: []string{"-cf", "-", "-C", sourcePath, "--", compressPath},
 		User: user,
-	}, garden.ProcessIO{Stdout: writer, Stderr: &stderrBuf})
+	}, garden.ProcessIO{Stdout: streamOutputWriter{writer}, Stderr: &stderrBuf})
 	if err != nil {
 		writer.Close()
 		reader.Close()
@@ -132,6 +132,18 @@ func (s *ExecStreamer) StreamOut(log lager.Logger, handle string, spec garden.St
 	}()
 
 	return &execStreamReader{PipeReader: reader, process: process, done: done}, nil
+}
+
+type streamOutputWriter struct {
+	writer *io.PipeWriter
+}
+
+func (writer streamOutputWriter) Write(data []byte) (int, error) {
+	written, err := writer.writer.Write(data)
+	if err == io.ErrClosedPipe {
+		return len(data), nil
+	}
+	return written, err
 }
 
 type execStreamReader struct {

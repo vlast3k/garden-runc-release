@@ -45,7 +45,11 @@ func parseProcStat(contents string) (procIdentity, error) {
 }
 
 func procStat(pid int) (procIdentity, error) {
-	contents, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "stat"))
+	return procStatFrom("/proc", pid)
+}
+
+func procStatFrom(procRoot string, pid int) (procIdentity, error) {
+	contents, err := os.ReadFile(filepath.Join(procRoot, strconv.Itoa(pid), "stat"))
 	if err != nil {
 		return procIdentity{}, err
 	}
@@ -57,32 +61,35 @@ func procStat(pid int) (procIdentity, error) {
 }
 
 func readProcIdentity(pid int) (procIdentity, error) {
-	identity, err := procStat(pid)
+	return readProcIdentityFrom("/proc", pid)
+}
+
+func readProcIdentityFrom(procRoot string, pid int) (procIdentity, error) {
+	identity, err := procStatFrom(procRoot, pid)
 	if err != nil {
 		return identity, err
 	}
-	root := filepath.Join("/proc", strconv.Itoa(pid))
+	root := filepath.Join(procRoot, strconv.Itoa(pid))
 	cmdline, err := os.ReadFile(filepath.Join(root, "cmdline"))
 	if err != nil {
 		return identity, err
 	}
-	if len(cmdline) == 0 {
-		return identity, nil
-	}
-	identity.Args, err = parseProcCmdline(string(cmdline))
-	if err != nil {
-		return identity, fmt.Errorf("PID %d: %w", pid, err)
+	if len(cmdline) != 0 {
+		identity.Args, err = parseProcCmdline(string(cmdline))
+		if err != nil {
+			return identity, fmt.Errorf("PID %d: %w", pid, err)
+		}
 	}
 	identity.Executable, err = os.Readlink(filepath.Join(root, "exe"))
+	if err != nil && !(len(cmdline) == 0 && os.IsNotExist(err)) {
+		return identity, err
+	}
+	verified, err := procStatFrom(procRoot, pid)
 	if err != nil {
 		return identity, err
 	}
-	verified, err := procStat(pid)
-	if err != nil {
-		return identity, err
-	}
-	if verified.Start != identity.Start {
-		return identity, fmt.Errorf("PID %d reused during capture", pid)
+	if verified.Start != identity.Start || verified.Parent != identity.Parent {
+		return identity, fmt.Errorf("PID %d reused or reparented during capture", pid)
 	}
 	return identity, nil
 }
@@ -124,7 +131,7 @@ func selectTaskProcesses(all map[int]procIdentity, taskPID int, taskID, bundle s
 	if !ok || filepath.Base(shim.Executable) != "containerd-shim-runsc-v1" || !procFlag(shim.Args, "-id", taskID) {
 		return nil, fmt.Errorf("task %s: no dedicated runsc shim parent proof: task=%+v parent=%+v", taskID, task, shim)
 	}
-	if !runtimeExecutable(task.Executable) || filepath.Base(bundle) != taskID {
+	if !runtimeExecutable(task.Executable) || len(task.Args) == 0 || filepath.Base(bundle) != taskID {
 		return nil, fmt.Errorf("task %s: unproven runtime executable or bundle: task=%+v bundle=%q", taskID, task, bundle)
 	}
 	selected := map[int]bool{shim.PID: true}
@@ -142,10 +149,21 @@ func selectTaskProcesses(all map[int]procIdentity, taskPID int, taskID, bundle s
 	gofer := false
 	for pid := range selected {
 		identity := all[pid]
-		if identity.Start == 0 || identity.Executable == "" || len(identity.Args) == 0 || identity.State == "Z" {
+		stub := false
+		if len(identity.Args) == 0 && identity.Executable == task.Executable {
+			visited := map[int]bool{pid: true}
+			for parent := identity.Parent; parent != 0 && !visited[parent]; parent = all[parent].Parent {
+				if parent == taskPID {
+					stub = true
+					break
+				}
+				visited[parent] = true
+			}
+		}
+		if identity.Start == 0 || identity.Executable == "" || (len(identity.Args) == 0 && !stub) || identity.State == "Z" {
 			return nil, fmt.Errorf("task %s: incomplete pre-delete process identity: %+v", taskID, identity)
 		}
-		if filepath.Base(identity.Args[0]) == "runsc-gofer" && runtimeExecutable(identity.Executable) && procFlag(identity.Args, "--bundle", bundle) {
+		if len(identity.Args) != 0 && filepath.Base(identity.Args[0]) == "runsc-gofer" && runtimeExecutable(identity.Executable) && procFlag(identity.Args, "--bundle", bundle) {
 			gofer = true
 		}
 		identities = append(identities, identity)

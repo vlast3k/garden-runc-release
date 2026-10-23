@@ -3,6 +3,7 @@ package nerd_test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -29,6 +30,7 @@ func TestSelectTaskProcesses(t *testing.T) {
 			12: {PID: 12, Parent: 1, Start: 102, State: "S", Executable: "/bin/runsc", Args: []string{"runsc-gofer", "gofer", "--bundle", bundle}},
 			13: {PID: 13, Parent: 12, Start: 103, State: "S", Executable: "/bin/runsc", Args: []string{"worker"}},
 			14: {PID: 14, Parent: 1, Start: 104, State: "S", Executable: "/bin/runsc", Args: []string{"runsc-gofer", "--bundle", bundle + "-other"}},
+			2:  {PID: 2, Parent: 0, Start: 90, State: "S"},
 		}
 	}
 	all := fixture()
@@ -39,6 +41,28 @@ func TestSelectTaskProcesses(t *testing.T) {
 	for _, identity := range identities {
 		if identity.PID == 14 {
 			t.Fatal("selected unrelated gofer")
+		}
+	}
+	all = fixture()
+	all[15] = procIdentity{PID: 15, Parent: 11, Start: 105, State: "S", Executable: all[11].Executable}
+	identities, err = selectTaskProcesses(all, 11, "task-id", bundle)
+	if err != nil || len(identities) != 5 {
+		t.Fatalf("sentry stub identities=%+v err=%v", identities, err)
+	}
+	for _, mutate := range []func(map[int]procIdentity){
+		func(all map[int]procIdentity) { stub := all[15]; stub.Executable = "/bin/unrelated"; all[15] = stub },
+		func(all map[int]procIdentity) { stub := all[15]; stub.Parent = 10; all[15] = stub },
+		func(all map[int]procIdentity) { stub := all[15]; stub.Start = 0; all[15] = stub },
+		func(all map[int]procIdentity) { stub := all[15]; stub.State = "Z"; all[15] = stub },
+		func(all map[int]procIdentity) { task := all[11]; task.Args = nil; all[11] = task },
+	} {
+		negative := make(map[int]procIdentity, len(all))
+		for pid, identity := range all {
+			negative[pid] = identity
+		}
+		mutate(negative)
+		if _, err := selectTaskProcesses(negative, 11, "task-id", bundle); err == nil {
+			t.Fatal("accepted unproven argv-free process")
 		}
 	}
 	for _, mutate := range []func(map[int]procIdentity){
@@ -60,6 +84,31 @@ func TestSelectTaskProcesses(t *testing.T) {
 		if _, err := selectTaskProcesses(all, 11, "task-id", bundle); err == nil {
 			t.Fatal("accepted missing identity proof")
 		}
+	}
+}
+
+func TestReadProcIdentityWithoutArgv(t *testing.T) {
+	root := t.TempDir()
+	processRoot := filepath.Join(root, "123")
+	if err := os.Mkdir(processRoot, 0700); err != nil {
+		t.Fatal(err)
+	}
+	stat := "123 (stub) S 456 " + strings.Repeat("0 ", 17) + "98765 0"
+	for name, contents := range map[string]string{"stat": stat, "cmdline": ""} {
+		if err := os.WriteFile(filepath.Join(processRoot, name), []byte(contents), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	identity, err := readProcIdentityFrom(root, 123)
+	if err != nil || identity.Start != 98765 || identity.Executable != "" || len(identity.Args) != 0 {
+		t.Fatalf("kernel thread identity=%+v err=%v", identity, err)
+	}
+	if err := os.Symlink("/bin/gvisor_sentry", filepath.Join(processRoot, "exe")); err != nil {
+		t.Fatal(err)
+	}
+	identity, err = readProcIdentityFrom(root, 123)
+	if err != nil || identity.Start != 98765 || identity.Executable != "/bin/gvisor_sentry" || len(identity.Args) != 0 {
+		t.Fatalf("stub identity=%+v err=%v", identity, err)
 	}
 }
 

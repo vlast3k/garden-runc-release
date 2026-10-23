@@ -30,6 +30,42 @@ import (
 // complete before the absolute deadline.
 var errReadAllTimeout = errors.New("ReadAll did not complete before deadline")
 
+func TestExecStreamCloseDrainsRuntimeOutput(t *testing.T) {
+	stop := make(chan struct{})
+	written := make(chan error, 1)
+	runtime := new(fakes.FakeOCIRuntime)
+	runtime.ExecStub = func(_ lager.Logger, _ string, _ garden.ProcessSpec, processIO garden.ProcessIO) (garden.Process, error) {
+		process := new(gardenfakes.FakeProcess)
+		process.SignalStub = func(garden.Signal) error {
+			close(stop)
+			return nil
+		}
+		finished := make(chan struct{})
+		go func() {
+			defer close(finished)
+			<-stop
+			_, err := processIO.Stdout.Write(bytes.Repeat([]byte("pending runtime output"), 8192))
+			written <- err
+		}()
+		process.WaitStub = func() (int, error) {
+			<-finished
+			return 137, nil
+		}
+		return process, nil
+	}
+	reader, err := rundmc.NewExecStreamer(runtime).StreamOut(lager.NewLogger("cancel-drain"), "archive", garden.StreamOutSpec{Path: "/tmp"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	closed, closeErr := newOnceBoundedCloser(reader).CloseWithTimeout(time.Second)
+	if !closed || closeErr != nil {
+		t.Fatalf("Close completed=%v error=%v", closed, closeErr)
+	}
+	if err := <-written; err != nil {
+		t.Fatalf("runtime output copier stopped instead of draining after cancellation: %v", err)
+	}
+}
+
 // onceBoundedCloser wraps an io.Closer so that Close is called at most once,
 // regardless of how many callers invoke CloseWithTimeout. All concurrent
 // callers block on the same underlying goroutine.
@@ -862,34 +898,38 @@ func TestGardenClientCancellationReapsExec(t *testing.T) {
 
 	runtime := new(fakes.FakeOCIRuntime)
 	process := new(gardenfakes.FakeProcess)
-	killed := make(chan struct{}, 1)
+	killed := make(chan struct{})
+	var killOnce sync.Once
 	waitDone := make(chan struct{})
 	producerDone := make(chan struct{})
 	execStarted := make(chan struct{})
 
 	process.SignalStub = func(sig garden.Signal) error {
 		if sig == garden.SignalKill {
-			select {
-			case killed <- struct{}{}:
-			default:
-			}
+			killOnce.Do(func() { close(killed) })
 		}
 		return nil
 	}
 	process.WaitStub = func() (int, error) {
 		<-killed
+		<-producerDone
 		close(waitDone)
 		return 137, nil
 	}
 	runtime.ExecStub = func(_ lager.Logger, _ string, _ garden.ProcessSpec, processIO garden.ProcessIO) (garden.Process, error) {
 		go func() {
 			close(execStarted)
+			defer close(producerDone)
 			for {
+				select {
+				case <-killed:
+					return
+				default:
+				}
 				if _, err := processIO.Stdout.Write(bytes.Repeat([]byte("x"), 4096)); err != nil {
 					break
 				}
 			}
-			close(producerDone)
 		}()
 		return process, nil
 	}
@@ -1248,33 +1288,37 @@ func TestGardenClientChurnThenControl(t *testing.T) {
 
 			case 2: // cancel: continuous producer, client disconnects after one byte.
 				proc := new(gardenfakes.FakeProcess)
-				killedCh := make(chan struct{}, 1)
+				killedCh := make(chan struct{})
+				var killOnce sync.Once
 				waitDoneCh := make(chan struct{})
 				producerDoneCh := make(chan struct{})
 				started := make(chan struct{})
 				proc.SignalStub = func(sig garden.Signal) error {
 					if sig == garden.SignalKill {
-						select {
-						case killedCh <- struct{}{}:
-						default:
-						}
+						killOnce.Do(func() { close(killedCh) })
 					}
 					return nil
 				}
 				proc.WaitStub = func() (int, error) {
 					<-killedCh
+					<-producerDoneCh
 					close(waitDoneCh)
 					return 137, nil
 				}
 				sharedRuntime.ExecStub = func(_ lager.Logger, _ string, _ garden.ProcessSpec, pio garden.ProcessIO) (garden.Process, error) {
 					go func() {
 						close(started)
+						defer close(producerDoneCh)
 						for {
+							select {
+							case <-killedCh:
+								return
+							default:
+							}
 							if _, err := pio.Stdout.Write(bytes.Repeat([]byte("x"), 4096)); err != nil {
 								break
 							}
 						}
-						close(producerDoneCh)
 					}()
 					return proc, nil
 				}

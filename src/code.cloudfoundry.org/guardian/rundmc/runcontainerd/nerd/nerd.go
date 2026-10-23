@@ -24,6 +24,8 @@ import (
 	"github.com/containerd/containerd/v2/pkg/cio"
 	"github.com/containerd/errdefs"
 	"github.com/containerd/typeurl/v2"
+	"google.golang.org/protobuf/encoding/protowire"
+	"google.golang.org/protobuf/types/known/anypb"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -50,8 +52,18 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 	log.Debug("creating-container", lager.Data{"containerID": containerID})
 	if n.policy == runcontainerd.RunscRuntime {
 		spec.Windows = nil // runsc rejects the Windows section
+		if spec.Annotations == nil {
+			spec.Annotations = make(map[string]string)
+		}
+		if _, exists := spec.Annotations["io.kubernetes.cri.container-type"]; !exists {
+			spec.Annotations["io.kubernetes.cri.container-type"] = "sandbox"
+		}
 	}
-	container, err := n.client.NewContainer(n.context, containerID, client.WithSpec(spec))
+	containerOpts := []client.NewContainerOpts{client.WithSpec(spec)}
+	if n.policy == runcontainerd.RunscRuntime {
+		containerOpts = append(containerOpts, client.WithRuntime(runcontainerd.SupportedRuntimeType, runscRuntimeOptions()))
+	}
+	container, err := n.client.NewContainer(n.context, containerID, containerOpts...)
 	if err != nil {
 		return err
 	}
@@ -72,6 +84,12 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 	}
 	_, err = container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), taskOpts...)
 	return err
+}
+
+func runscRuntimeOptions() *anypb.Any {
+	configPath := protowire.AppendTag(nil, 2, protowire.BytesType)
+	configPath = protowire.AppendString(configPath, "/etc/containerd/runsc/config.toml")
+	return &anypb.Any{TypeUrl: "runtimeoptions.v1.Options", Value: configPath}
 }
 
 func (n *Nerd) Start(log lager.Logger, containerID string) error {

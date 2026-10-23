@@ -14,7 +14,7 @@
   },
   "guardian": {
     "path": "src/code.cloudfoundry.org/guardian",
-    "tree": "d66fc7838ccaf9bbadeadb258182fbc587fadff0",
+    "tree": "26b9f00d4f64d99cea6c4688394f9997971cacf3",
     "upstream_revision": "90175b24cfcdaafc1f5e26a060251423a53805a3",
     "ported_revision": "e4e266e0dad0e2957f5920b927a7f86776f447ff",
     "ported_repository": "https://github.tools.sap/cp-runtime/guardian.git"
@@ -47,7 +47,7 @@
           "selector": "deletes a created alternative-runtime task using the required shim cleanup"
         }
       ],
-      "limitation": "NOT RUN for this monorepo candidate: actual matched runsc CREATED-task lifecycle and complete live acceptance. Metadata and source marker presence do not prove execution. Keep cleanup7 until its replacement gate passes."
+      "limitation": "Native Linux full Nerd gate passes for this inline Guardian tree: runsc 48/48 with no skips and stock 47/48 with one alternative-runtime-only skip; both cleanup_rc=0. Binary SHA-256 3117b7094f5b8225a1b2506348c76d1af0345019ad6ac3ddb921f77c395615c5. Exact commands, retained failed attempts and raw log hashes are in docs/CFAR-1536-MIGRATION.md. Final release deployment and complete CF acceptance remain unverified; metadata is not runtime acceptance or approval to remove cleanup7."
     }
   ]
 }

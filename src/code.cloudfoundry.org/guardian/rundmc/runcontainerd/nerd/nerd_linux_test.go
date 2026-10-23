@@ -38,6 +38,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"code.cloudfoundry.org/garden"
@@ -72,6 +73,11 @@ func (rpc *policyContainersServer) Get(context.Context, *containersapi.GetContai
 	return &containersapi.GetContainerResponse{Container: rpc.stored}, nil
 }
 
+func (rpc *policyContainersServer) Update(_ context.Context, request *containersapi.UpdateContainerRequest) (*containersapi.UpdateContainerResponse, error) {
+	rpc.stored = request.Container
+	return &containersapi.UpdateContainerResponse{Container: request.Container}, nil
+}
+
 type policyTasksServer struct {
 	tasksapi.UnimplementedTasksServer
 	created chan *tasksapi.CreateTaskRequest
@@ -100,14 +106,18 @@ func (rpc *policyTasksServer) Kill(_ context.Context, request *tasksapi.KillRequ
 
 func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 	for _, test := range []struct {
-		runtimeType string
-		wantRuntime string
-		wantWindows bool
-		wantOptions bool
+		runtimeType       string
+		wantRuntime       string
+		wantWindows       bool
+		wantOptions       bool
+		annotations       map[string]string
+		wantContainerType string
 	}{
 		{wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true},
 		{runtimeType: "io.containerd.runc.v2", wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true},
-		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", wantContainerType: "sandbox"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"sentinel": "retained"}, wantContainerType: "sandbox"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"io.kubernetes.cri.container-type": "container"}, wantContainerType: "container"},
 	} {
 		t.Run(test.runtimeType, func(t *testing.T) {
 			socketDir, err := os.MkdirTemp("", "nerd-policy-")
@@ -146,7 +156,8 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 			defer cancel()
 			ctx = leases.WithLease(ctx, "lease-is-off")
 			manager := nerd.New(containerdClient, ctx, t.TempDir(), nil, policy)
-			spec := &specs.Spec{Version: specs.Version, Windows: &specs.Windows{}, Process: &specs.Process{Args: []string{"/policy-sentinel"}, Cwd: "/"}}
+			wantSentinel := test.annotations["sentinel"]
+			spec := &specs.Spec{Version: specs.Version, Windows: &specs.Windows{}, Process: &specs.Process{Args: []string{"/policy-sentinel"}, Cwd: "/"}, Annotations: test.annotations}
 			err = manager.Create(lager.NewLogger("nerd-policy"), "policy-container", spec, 4242, 4343, func() (io.Reader, io.Writer, io.Writer) { return nil, nil, nil })
 			if err == nil || !strings.Contains(err.Error(), "policy fixture stops before runtime creation") {
 				t.Fatalf("Create error = %v, want bounded fixture rejection", err)
@@ -155,6 +166,20 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 			case request := <-containerRPC.created:
 				if request.ID != "policy-container" || request.Runtime.Name != test.wantRuntime {
 					t.Errorf("container identity/runtime = %+v", request)
+				}
+				if !test.wantOptions {
+					options := request.Runtime.Options
+					if options == nil || options.TypeUrl != "runtimeoptions.v1.Options" {
+						t.Fatalf("runsc runtime options = %v, want runtimeoptions.v1.Options", options)
+					}
+					field, wireType, tagSize := protowire.ConsumeTag(options.Value)
+					if field != 2 || wireType != protowire.BytesType || tagSize < 0 {
+						t.Fatalf("runsc config_path tag = %d/%d/%d, want field 2 string", field, wireType, tagSize)
+					}
+					configPath, pathSize := protowire.ConsumeString(options.Value[tagSize:])
+					if configPath != "/etc/containerd/runsc/config.toml" || pathSize < 0 || tagSize+pathSize != len(options.Value) {
+						t.Fatalf("runsc config_path payload = %q (%d bytes), want exact configured path only", configPath, pathSize)
+					}
 				}
 				var emitted specs.Spec
 				if err := json.Unmarshal(request.Spec.Value, &emitted); err != nil {
@@ -165,6 +190,12 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 				}
 				if len(emitted.Process.Args) != 1 || emitted.Process.Args[0] != "/policy-sentinel" {
 					t.Errorf("unrelated process arguments changed: %v", emitted.Process.Args)
+				}
+				if emitted.Annotations["io.kubernetes.cri.container-type"] != test.wantContainerType {
+					t.Errorf("container type = %q, want %q", emitted.Annotations["io.kubernetes.cri.container-type"], test.wantContainerType)
+				}
+				if emitted.Annotations["sentinel"] != wantSentinel {
+					t.Error("unrelated annotation lost")
 				}
 			default:
 				t.Fatal("no container creation payload")
@@ -187,7 +218,7 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 						t.Errorf("stock options = %+v, want NoNewKeyring and UID/GID 4242/4343", decoded)
 					}
 				} else if request.Options != nil {
-					t.Errorf("runsc inherited runc task options: %v", request.Options)
+					t.Errorf("runsc inherited task options: %v", request.Options)
 				}
 			default:
 				t.Fatal("no task creation payload")
@@ -827,6 +858,7 @@ var _ = Describe("Nerd", func() {
 		It("starts an init process in the container", func() {
 			spec = generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, maximusUID, maximusGID, initProcessIO)).To(Succeed())
+			Expect(cnerd.Start(testLogger, containerID)).To(Succeed())
 
 			processes := listProcesses(testConfig.CtrBin, testConfig.Socket, containerID)
 			// init processes look like this in ctr:
@@ -894,6 +926,7 @@ var _ = Describe("Nerd", func() {
 		JustBeforeEach(func() {
 			spec = generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, maximusUID, maximusGID, initProcessIO)).To(Succeed())
+			Expect(cnerd.Start(testLogger, containerID)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -910,8 +943,9 @@ var _ = Describe("Nerd", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(proc.ID()).To(Equal(processID))
 
-			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, containerID)
-			Expect(containers).To(ContainSubstring(processID))
+			loaded, err := cnerd.GetProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(loaded.ID()).To(Equal(processID))
 		})
 
 		Describe("process IO", func() {
@@ -992,6 +1026,7 @@ var _ = Describe("Nerd", func() {
 		JustBeforeEach(func() {
 			spec = generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, maximusUID, maximusGID, initProcessIO)).To(Succeed())
+			Expect(cnerd.Start(testLogger, containerID)).To(Succeed())
 
 			processSpec := &specs.Process{
 				Args: []string{"/bin/sh", "-c", "exit 17"},
@@ -1036,6 +1071,7 @@ var _ = Describe("Nerd", func() {
 		JustBeforeEach(func() {
 			spec = generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, maximusUID, maximusGID, initProcessIO)).To(Succeed())
+			Expect(cnerd.Start(testLogger, containerID)).To(Succeed())
 			stdoutBuffer := gbytes.NewBuffer()
 			processIO = func() (io.Reader, io.Writer, io.Writer, bool) {
 				return nil, stdoutBuffer, nil, false
@@ -1084,6 +1120,7 @@ var _ = Describe("Nerd", func() {
 		JustBeforeEach(func() {
 			spec = generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, maximusUID, maximusGID, initProcessIO)).To(Succeed())
+			Expect(cnerd.Start(testLogger, containerID)).To(Succeed())
 
 			processSpec := &specs.Process{
 				Args: []string{"/bin/sleep", "30"},
@@ -1267,6 +1304,7 @@ var _ = Describe("Nerd", func() {
 		JustBeforeEach(func() {
 			spec = generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, maximusUID, maximusGID, initProcessIO)).To(Succeed())
+			Expect(cnerd.Start(testLogger, containerID)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -1274,10 +1312,20 @@ var _ = Describe("Nerd", func() {
 		})
 
 		It("gets the container init process pid", func() {
-			procls := listProcesses(testConfig.CtrBin, testConfig.Socket, containerID)
 			containerPid, err := cnerd.GetContainerPID(testLogger, containerID)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(procls).To(ContainSubstring(strconv.Itoa(int(containerPid))))
+			Expect(containerPid).NotTo(BeZero())
+			if testRuntimePolicy == runcontainerd.RunscRuntime {
+				cmdline, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", containerPid))
+				Expect(err).NotTo(HaveOccurred())
+				arguments := strings.Split(strings.TrimRight(string(cmdline), "\x00"), "\x00")
+				Expect(filepath.Base(arguments[0])).To(Equal("runsc-sandbox"))
+				Expect(arguments).To(ContainElement("boot"))
+				Expect(arguments).To(ContainElement(containerID))
+			} else {
+				procls := listProcesses(testConfig.CtrBin, testConfig.Socket, containerID)
+				Expect(procls).To(ContainSubstring(strconv.Itoa(int(containerPid))))
+			}
 		})
 	})
 
@@ -1297,6 +1345,7 @@ var _ = Describe("Nerd", func() {
 			Expect(cnerd.Create(testLogger, containerID, spec, maximusUID, maximusGID, initProcessIO)).To(Succeed())
 
 			events = cnerd.OOMEvents(testLogger)
+			Expect(cnerd.Start(testLogger, containerID)).To(Succeed())
 
 			proc, err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 			Expect(err).NotTo(HaveOccurred())
