@@ -9,8 +9,8 @@ uploaded and all four t09a cells now use it. Runsc rollback/re-upgrade rehearsal
 and durable regeneration parity pass; landscape commit `6753857` retains the
 final version. Resource enforcement/accounting and ASG controls pass on both
 backends. Final 30-minute soak and three mixed fault-matrix repetitions pass.
-Required full criterion reconciliation and reviewed source/parent adoption
-remain incomplete.
+AC1-AC6 evidence is reconciled below. Final reviewed source/parent adoption
+under AC7 remains incomplete.
 
 ## Exact Inputs
 
@@ -838,7 +838,7 @@ The completion-audit failure-mode catalog was assessed as follows:
 
 | Modes | Disposition / discriminating evidence |
 | --- | --- |
-| 1, 13, 19 scope, thresholds, authority | Final adoption remains OPEN; original Staticfile failure is retained with the later fixture repair and six-cycle validation below; no owner exception, criterion waiver or Jira closure is inferred |
+| 1, 13, 19 scope, thresholds, authority | Final adoption remains OPEN; original Staticfile failure is retained with the later fixture repair and six-cycle validation above; no owner exception, criterion waiver or Jira closure is inferred |
 | 2, 4 selected owner and real caller | Verified for recorded subsets: actual Nerd backend, pinned official Garden caller, installed typed runtime options, real kernel OOM/event and effective parser checks; fake-backed streaming tests remain labelled local evidence |
 | 3, 5, 6 selected tests, controls and predicates | Native 48/47 counts, exact bytes/status, independent OOM, invalid parser controls and per-mode mixed postconditions are recorded; stock alternative-only spec is N/A, not PASS |
 | 7, 15 partial state and tool wrappers | V1 orphan inventory failed closed on absent root; V2 actual TOML inventory and raw log pass. Empty tool captures were recovered from persisted files; rc alone was not used as evidence |
@@ -857,6 +857,15 @@ The completion-audit failure-mode catalog was assessed as follows:
 | F1536-3 reviewed component/default adoption | AC1, AC7 | OPEN: draft PR12 published; both bot modes size-rejected without findings; focused critical self-review found no new critical defect; complete source/criterion reconciliation before merge and parent pin adoption remains |
 | F1536-4 reproducible diagnostics | AC3, AC7 evidence | REPAIRED AND REVALIDATED: sources retained outside Guardian runtime tree; resource race controls pass, parser cross-build passes, source comparison, Python compilation and Bash syntax checks pass |
 
+Read-only review compared critical port contracts with the independent input
+and canonical base and found no omitted critical port. Its claim that Garden
+0.9.0 removed the HTTP patch was rejected: actual `packages/guardian/packaging`
+still invokes the owned applicator, which verifies exact patched handler and
+patch bytes. Native actual transport and packaged fault tests above establish
+their exercised behavior. The task-load deadline retry is a documented
+version adaptation, not a new critical finding. Review summaries are not test
+execution or independent approval.
+
 Cleanup mapping: native runsc full-suite spec `deletes a created
 alternative-runtime task using the required shim cleanup` captures exact
 shim/task/gofer and descendants (including argv-free sentry descendants) before
@@ -871,12 +880,12 @@ possible untested runtime failure has no residue.
 
 | Criterion | Status | Required next evidence |
 | --- | --- | --- |
-| AC1 revisions and complete delta disposition | NOT RUN as a complete criterion | Partial source evidence above; full delta reconciliation and default-based review remain |
-| AC2 retained lifecycle/pea/stream/metrics/network/runtime behavior | NOT RUN as a complete criterion | Native backend gates, final lifecycle/archive, ASG, enforcement/accounting and cancel/late-exit/mixed pass; complete contract and orphan mapping remains |
-| AC3 package/config/provenance agreement | NOT RUN as a complete criterion | Native BOSH compilation, clean candidate provenance and exact installed stock/runsc parser controls pass; final source/publication reconciliation remains |
-| AC4 component and parent regressions | NOT RUN as a complete criterion | Final native Nerd/focused/race suites and prospective `2a7cf010` parent --linux gate pass; final published parent candidate validation remains |
+| AC1 revisions and complete delta disposition | PASS for runtime candidate `2a7cf010` | Exact upstream/fork/input identities and all 13 contract dispositions above, newer independent streamer reconciliation and explicit final repairs; source self-review disclosed, bot coverage unavailable |
+| AC2 retained lifecycle/pea/stream/metrics/network/runtime behavior | PASS for recorded supported matrix | Native final backend/focused/race tests, official-client lifecycle/archive, real CF pea/SSH/sidecar, ASG, accounting and cancel/late/mixed checks map to retained contracts; cleanup mapping above distinguishes pre-delete and post-destroy evidence |
+| AC3 package/config/provenance agreement | PASS for exact built candidate | Native BOSH compilation, clean exact-tree/toolchain provenance, real extracted-package builds, Git-free applicator negative controls, renderer and exact installed stock/runsc parser controls pass; no cross-job rewrites |
+| AC4 component and parent regressions | PASS for exact runtime tree and prospective pin | Final native Nerd/focused/race suites and prospective `2a7cf010` parent default/--linux gate pass with counts above; final published parent revision will be revalidated under AC7 |
 | AC5 new stock Garden with unchanged Diego/Rep | PASS for exercised compatibility | Both stock cells retain exact Rep hashes; staging, HTTP healthcheck, proxy/sidecar, three SSH cycles and 30-minute route soak pass with unchanged Diego 2.138.0; whole-task acceptance is separate |
-| AC6 live matrix/soak/rollback | NOT RUN as a complete criterion | Final all-cell rollout, rollback/re-upgrade, permanent pin, six safe-fixture and six repaired real-Staticfile restarts, full 30-minute soak, ASG, enforcement and mixed fault checks pass; complete orphan mapping remains |
+| AC6 live matrix/soak/rollback | PASS for exact installed candidate and declared matrix | Final all-cell rollout, rollback/re-upgrade with fresh sandboxes, permanent pin, six safe-fixture and six repaired real-Staticfile restarts, full 30-minute soak, ASG/DNS/outbound, enforcement and mixed fault checks pass; pre-teardown identity/exec/I/O assertions and post-destroy audit map above; original failed attempts retained |
 | AC7 reviewed publication and parent adoption | NOT RUN | Exact reviewed component/default revision, parent pin and tested-tree comparison |
 
 Stock diagnostic cell was `cf_cells_1`,
