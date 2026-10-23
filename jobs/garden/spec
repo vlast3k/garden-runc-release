@@ -84,6 +84,39 @@ properties:
     description: "default blkio.weight value for containers. Valid values are 0 (use system default), or 10 - 1000."
     default: 0
 
+  garden.container_io_max_read_bps:
+    description: |
+      Per-container read bytes/s limit (cgroups v2 io.max rbps). 0 = unlimited.
+      Only effective on cgroups v2 (Noble stemcells).
+      To choose a value: benchmark the disk's raw read throughput (e.g. fio --rw=read --bs=1m --direct=1)
+      and set a fraction that prevents a single container from saturating the disk.
+      Monitor io.stat or container diskio metrics to fine-tune.
+    default: 0
+  garden.container_io_max_write_bps:
+    description: |
+      Per-container write bytes/s limit (cgroups v2 io.max wbps). 0 = unlimited.
+      Only effective on cgroups v2 (Noble stemcells).
+      To choose a value: benchmark the disk's raw write throughput (e.g. fio --rw=write --bs=1m --direct=1)
+      and set a fraction that prevents a single container from saturating the disk.
+      Monitor io.stat or container diskio metrics to fine-tune.
+    default: 0
+  garden.container_io_max_read_iops:
+    description: |
+      Per-container read IOPS limit (cgroups v2 io.max riops). 0 = unlimited.
+      Only effective on cgroups v2 (Noble stemcells).
+      To choose a value: benchmark the disk's raw read IOPS (e.g. fio --rw=randread --bs=4k --direct=1)
+      and set a fraction that prevents a single container from saturating the disk.
+      Monitor io.stat or container diskio metrics to fine-tune.
+    default: 0
+  garden.container_io_max_write_iops:
+    description: |
+      Per-container write IOPS limit (cgroups v2 io.max wiops). 0 = unlimited.
+      Only effective on cgroups v2 (Noble stemcells).
+      To choose a value: benchmark the disk's raw write IOPS (e.g. fio --rw=randwrite --bs=4k --direct=1)
+      and set a fraction that prevents a single container from saturating the disk.
+      Monitor io.stat or container diskio metrics to fine-tune.
+    default: 0
+
   garden.default_container_rootfs:
     description: "path to the rootfs to use when a container specifies no rootfs"
     default: /var/vcap/packages/busybox/busybox-1.37.0.tar
@@ -165,6 +198,14 @@ properties:
     description: "Maximum container capacity to advertise. It is not recommended to set this larger than 250."
     default: 250
 
+  garden.containerd_runtime_type:
+    description: "Containerd runtime type. Empty preserves the stock runc runtime. Requires containerd_mode."
+    default: ""
+
+  garden.use_containerd_for_processes:
+    description: "Use containerd for process execution. Requires containerd_mode; disabled by default."
+    default: false
+
   garden.cpu_quota_per_share_in_us:
     description: "Maximum number of microseconds each cpu share assigned to a container allows per quota period. When set to zero cpu limit is disabled."
     default: 0
@@ -202,6 +243,10 @@ properties:
     description: AppArmor profile to use for unprivileged container processes
     default: garden-default
 
+  garden.no_new_privileges:
+    description: "Set NoNewPrivileges on unprivileged container processes. Prevents privilege escalation via setuid binaries and file capabilities."
+    default: false
+
   garden.device_cgroup_rules:
     description: Device cgroup rules that will be applied to privileged containers. By default loop devices are allowed for privileged containers.
     default: ["b 7:* rwm", "c 10:237 rwm"]
@@ -215,14 +260,6 @@ properties:
   garden.containerd_mode:
     description: "Use containerd for container lifecycle management. NOTE: cannot be used in combination with bpm"
     default: true
-
-  garden.containerd_runtime_type:
-    description: "Containerd runtime type to use for containers (e.g. io.containerd.runsc.v1 for gVisor). When empty, the default containerd runtime (runc) is used."
-    default: ""
-
-  garden.use_containerd_for_processes:
-    description: "Route process exec calls through containerd instead of the runtime binary directly. Required when using an alternative containerd runtime type (e.g. gVisor) so that exec/healthcheck operations target the correct runtime."
-    default: false
 
   garden.tcp_keepalive_time:
     description: Sets the `net.ipv4.tcp_keepalive_time` kernel parameter in containers. If not specified, the value from the linux init_net namespace is used.
@@ -290,6 +327,10 @@ properties:
     description: "Do not mount image root filesystem automatically, just return the mount information."
     default: false
 
+  grootfs.exclude_image_from_quota:
+    description: "Exclude image layers from container disk quota calculations."
+    default: false
+
   grootfs.graph_cleanup_threshold_in_mb:
     description: "DEPRECATED in favour of grootfs.reserved_space_for_other_jobs_in_mb."
     default: -1
@@ -311,12 +352,12 @@ properties:
     description: "Amount of space that will be kept free for other jobs. The GrootFS store will be able to grow up to a maximum size of its disk minus this reserved space. Where the reserved space does not allow sufficient size for GrootFS to store container images and root filesystems (currently 15GB), the limit will be a soft limit, and garbage collection will attempt to keep disk space available for other jobs. -1 disables GC and allows GrootFS to potentially use the whole disk."
     default: 15360
 
+  grootfs.gc_threshold_factor:
+    description: "Factor (in the range (0, 1]) applied to the available store space to compute the garbage collection threshold. The effective GC threshold is `factor * (available_space - reserved_space_for_other_jobs)`. A factor of 1.0 (the default) preserves the historical behaviour of triggering GC only when the store fills the available space; smaller values trigger GC sooner."
+    default: 1.0
+
   grootfs.experimental_direct_io:
     description: "Enable the DIRECT_IO flag on the loop device associated with the GrootFS store. This should reduce memory and processing overheads by eliminating double caching of the store filesystem"
-    default: false
-
-  grootfs.exclude_image_from_quota:
-    description: "Boolean. When true, globally exclude base-image bytes from disk quotas for both privileged and unprivileged GrootFS stores, even for Garden total-scope requests. Positive writable-layer quotas still apply. When false (default), preserve stock accounting: total scope includes the image, while a per-request exclusive scope can still exclude it. This is an explicit cell-wide accounting policy, not a runtime requirement or per-request override; custom image plugins may ignore it."
     default: false
 
   bpm.enabled:

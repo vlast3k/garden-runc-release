@@ -1,0 +1,18 @@
+applications:
+- name: cfar1536-static
+  memory: 192M
+  disk_quota: 512M
+  instances: 1
+  stack: cflinuxfs4
+  routes:
+  - route: ((route))
+  buildpacks:
+  - staticfile_buildpack
+  health-check-type: http
+  health-check-http-endpoint: /
+  timeout: 90
+  sidecars:
+  - name: cfar1536-audit
+    process_types: [web]
+    memory: 32M
+    command: /bin/sh -c 'printf "cfar1536-sidecar\n" > /tmp/cfar1536-sidecar; exec /bin/sleep infinity'

@@ -32,5 +32,3 @@ blobs
 /bin
 .tool-versions
 Guardfile
-__pycache__/
-*.py[cod]

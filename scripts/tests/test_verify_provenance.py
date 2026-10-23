@@ -459,7 +459,7 @@ source "$1"
         self.assert_result(2, "duplicate JSON key: schema_version")
 
     def test_unsupported_schema_and_field(self) -> None:
-        self.fixture.metadata["schema_version"] = 2
+        self.fixture.metadata["schema_version"] = 3
         self.fixture.write_metadata()
         self.assert_result(2, "supported integer 1")
         self.fixture.metadata["schema_version"] = 1
@@ -752,15 +752,18 @@ source "$1"
         git(self.fixture.root, "commit", "-m", "accept independent remote main history")
         self.assert_result(0, "Verified release-local contract consistency")
 
-    def test_production_contract_records_reviewed_guardian_identities(self) -> None:
+    def test_production_contract_records_monorepo_identities(self) -> None:
         root = VERIFIER.parent.parent
         metadata = json.loads((root / "PROVENANCE.json").read_text(encoding="utf-8"))
-        accepted_revision = "b55c6c6df4b9c78b70136c7597a5ccf92035d449"
-        self.assertEqual(metadata["guardian"]["revision"], accepted_revision)
+        self.assertEqual(metadata["schema_version"], 2)
+        self.assertEqual(metadata["guardian"]["path"], "src/code.cloudfoundry.org/guardian")
+        self.assertEqual(metadata["guardian"]["upstream_revision"], "90175b24cfcdaafc1f5e26a060251423a53805a3")
+        self.assertEqual(metadata["guardian"]["ported_revision"], "e4e266e0dad0e2957f5920b927a7f86776f447ff")
+        self.assertEqual(metadata["toolchain"]["archive"], "go1.27.3.linux-amd64.tar.gz")
+        self.assertEqual(metadata["toolchain"]["package_sha256"], "b49ef5a44acad90bd5e2504d2235a6630c3add2fb7c63848c90c4b46f16f9f83")
         self.assertEqual(metadata["downstream_patches"][0]["revision"], CLEANUP_PATCH_REVISION)
         self.assertEqual(metadata["behavior_gates"][0]["test_anchors"][0]["selector"], CLEANUP_SELECTOR)
-        self.assertEqual(git(root / "src/guardian", "rev-parse", "HEAD"), accepted_revision)
-        self.assertEqual(git(root, "rev-parse", "HEAD:src/guardian"), accepted_revision)
+        self.assertTrue((root / metadata["guardian"]["path"] / "go.mod").is_file())
 
     def test_patch_revision_need_not_be_ancestor_of_delivered_head(self) -> None:
         delivered = self.fixture.revision

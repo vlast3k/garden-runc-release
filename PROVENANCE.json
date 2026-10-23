@@ -1,26 +1,23 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "release": {
     "name": "garden-runc",
     "repository": "https://github.tools.sap/cp-runtime/garden-runc-release.git",
     "final_config": "config/final.yml"
   },
   "toolchain": {
-    "package": "golang-1.26-linux",
-    "spec": "packages/golang-1.26-linux/spec",
-    "version_file": "packages/golang-1.26-linux/version",
-    "packaging": "packages/golang-1.26-linux/packaging",
-    "archive": "go1.26.3.linux-amd64.tar.gz",
-    "blob_manifest": "config/blobs.yml",
-    "blob_root": "blobs",
-    "size": 66862230,
-    "sha256": "2b2cfc7148493da5e73981bffbf3353af381d5f93e789c82c79aff64962eb556"
+    "package": "golang-1.27-linux",
+    "fingerprint": "803d6abe1fb7886295f7a5a3a0a47b6d51c577af33635c2bb5e0cbfe0a11365a",
+    "package_sha256": "b49ef5a44acad90bd5e2504d2235a6630c3add2fb7c63848c90c4b46f16f9f83",
+    "archive": "go1.27.3.linux-amd64.tar.gz",
+    "archive_sha256": "65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40"
   },
   "guardian": {
-    "path": "src/guardian",
-    "revision": "b55c6c6df4b9c78b70136c7597a5ccf92035d449",
-    "repository": "https://github.tools.sap/cp-runtime/guardian.git",
-    "branch": "main"
+    "path": "src/code.cloudfoundry.org/guardian",
+    "tree": "26b9f00d4f64d99cea6c4688394f9997971cacf3",
+    "upstream_revision": "90175b24cfcdaafc1f5e26a060251423a53805a3",
+    "ported_revision": "e4e266e0dad0e2957f5920b927a7f86776f447ff",
+    "ported_repository": "https://github.tools.sap/cp-runtime/guardian.git"
   },
   "downstream_patches": [
     {
@@ -28,7 +25,7 @@
       "owner": "guardian",
       "revision": "186b414477c98ed9fab5707a9a8c79d8e55ae80b",
       "status": "required",
-      "application_check": "Review the exact Guardian gitlink and HEAD; the patch revision is a source reference, not an ancestry or behavior proof. Run the anchored tests to establish behavior.",
+      "application_check": "Verify the exact inline Guardian tree. The independent Guardian patch revision is a historical source reference, not a monorepo ancestry or behavior proof. Run the anchored tests to establish behavior.",
       "test_anchors": [
         {
           "kind": "unit",
@@ -50,7 +47,7 @@
           "selector": "deletes a created alternative-runtime task using the required shim cleanup"
         }
       ],
-      "limitation": "NOT RUN: matching runsc/shim binaries are unavailable. The anchors identify executable gates; metadata and source marker presence do not prove that the tests ran. Stock Nerd 47 passing specs are not runsc proof. Keep cleanup7 until its lifecycle replacement gate passes."
+      "limitation": "Native Linux full Nerd gate passes for this inline Guardian tree: runsc 48/48 with no skips and stock 47/48 with one alternative-runtime-only skip; both cleanup_rc=0. Binary SHA-256 3117b7094f5b8225a1b2506348c76d1af0345019ad6ac3ddb921f77c395615c5. Exact commands, retained failed attempts and raw log hashes are in docs/CFAR-1536-MIGRATION.md. Final native release is installed on all four t09a cells; the declared CF matrix and rollback/re-upgrade pass. Reviewed final parent adoption remains unverified; metadata alone is not runtime acceptance or approval to remove cleanup7."
     }
   ]
 }
