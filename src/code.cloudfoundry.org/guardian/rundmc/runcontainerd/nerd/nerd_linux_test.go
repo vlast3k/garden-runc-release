@@ -45,6 +45,7 @@ import (
 	"code.cloudfoundry.org/garden/client/connection"
 	"code.cloudfoundry.org/garden/gardenfakes"
 	"code.cloudfoundry.org/garden/server"
+	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
 	"code.cloudfoundry.org/guardian/metrics"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
@@ -1211,6 +1212,9 @@ var _ = Describe("Nerd", func() {
 				Expect(syscall.Mount(spec.Root.Path, spec.Root.Path, "", syscall.MS_BIND|syscall.MS_REC, "")).To(Succeed())
 				rootfsMounted = true
 			}
+			if os.Getenv("NERD_TEST_CREATED_INVALID_START") == "true" {
+				spec.Process.Args = []string{"/cfar1508-command-does-not-exist"}
+			}
 			Expect(setup.create(func() error {
 				return cnerd.Create(testLogger, containerID, spec, maximusUID, maximusGID, initProcessIO)
 			})).To(Succeed())
@@ -1247,7 +1251,7 @@ var _ = Describe("Nerd", func() {
 				}
 			})
 
-			It("deletes a created alternative-runtime task using the required shim cleanup", func() {
+			It("deletes a created alternative-runtime task through public TaskService", func() {
 				pid, status, err := cnerd.State(testLogger, containerID)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(pid).NotTo(BeZero())
@@ -1268,6 +1272,176 @@ var _ = Describe("Nerd", func() {
 					err := os.Remove(filepath.Join("/sys/fs/cgroup", fmt.Sprintf("nerdspace%d", GinkgoParallelProcess()), containerID))
 					Expect(err == nil || os.IsNotExist(err)).To(BeTrue())
 				}
+			})
+
+			It("converges the standard pre-start task lifecycle without cleanup7", func() {
+				if os.Getenv("NERD_TEST_STANDARD_CREATED_DELETE") != "true" {
+					Skip("opt-in CFAR-1508 replacement regression")
+				}
+				pid, state, err := cnerd.State(testLogger, containerID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(pid).NotTo(BeZero())
+				Expect(state).To(Equal(string(client.Created)))
+				identities, err := captureTaskProcesses(pid, containerID)
+				Expect(err).NotTo(HaveOccurred())
+				if os.Getenv("NERD_TEST_CREATED_RESTART") == "true" {
+					Expect(containerdProcess.Signal(syscall.SIGTERM)).To(Succeed())
+					waitStatus, waitErr := containerdProcess.Wait()
+					Expect(waitErr).NotTo(HaveOccurred())
+					Expect(waitStatus.ExitCode()).To(BeZero())
+					containerdProcess = containerdrunner.NewContainerdProcess(testConfig.RunDir, containerdrunner.ContainerdConfig(testConfig.RunDir))
+					pidAfterRestart, stateAfterRestart, stateErr := cnerd.State(testLogger, containerID)
+					Expect(stateErr).NotTo(HaveOccurred())
+					Expect(pidAfterRestart).To(Equal(pid))
+					Expect(stateAfterRestart).To(Equal(state))
+					fmt.Fprintf(GinkgoWriter, "CFAR1508 private containerd restarted with task id=%s pid=%d\n", containerID, pid)
+				}
+				defer func() {
+					for _, identity := range identities {
+						if filepath.Base(identity.Executable) != "containerd-shim-runsc-v1" {
+							continue
+						}
+						current, err := readProcIdentity(identity.PID)
+						if os.IsNotExist(err) {
+							continue
+						}
+						Expect(err).NotTo(HaveOccurred())
+						if current.Start != identity.Start {
+							continue
+						}
+						Expect(current.Executable).To(Equal(identity.Executable))
+						Expect(procFlag(current.Args, "-id", containerID)).To(BeTrue())
+						Expect(syscall.Kill(identity.PID, syscall.SIGKILL)).To(Succeed())
+					}
+					Eventually(func() error { return taskProcessesGone(identities, procStat) }, "10s", "100ms").Should(Succeed())
+					Eventually(func() string { return listTasks(testConfig.CtrBin, testConfig.Socket) }, "10s", "100ms").ShouldNot(ContainSubstring(containerID))
+				}()
+				ctx, cancel := context.WithTimeout(containerdContext, 150*time.Second)
+				defer cancel()
+				standardDeleter := nerd.New(containerdClient, ctx, fifoDir, mp, runcontainerd.StockRuntime)
+				started := time.Now()
+				fmt.Fprintf(GinkgoWriter, "CFAR1508 standard-delete begin id=%s pid=%d state=%s identities=%+v\n", containerID, pid, state, identities)
+				if os.Getenv("NERD_TEST_DIRECT_CREATED_DELETE") == "true" {
+					eventCtx, cancelEvents := context.WithTimeout(containerdContext, 10*time.Second)
+					defer cancelEvents()
+					eventStream, eventErrors := containerdClient.Subscribe(eventCtx)
+					barrierTopic := "/cfar1508/subscription-barrier"
+					barrierID := containerID + "-barrier"
+					barrierTicker := time.NewTicker(100 * time.Millisecond)
+					defer barrierTicker.Stop()
+					synchronized := false
+					for !synchronized {
+						select {
+						case <-barrierTicker.C:
+							Expect(containerdClient.EventService().Publish(eventCtx, barrierTopic, &apievents.TaskCreate{ContainerID: barrierID})).To(Succeed())
+						case envelope := <-eventStream:
+							Expect(envelope).NotTo(BeNil())
+							if envelope.Topic == barrierTopic {
+								decoded, decodeErr := typeurl.UnmarshalAny(envelope.Event)
+								Expect(decodeErr).NotTo(HaveOccurred())
+								barrier, ok := decoded.(*apievents.TaskCreate)
+								Expect(ok).To(BeTrue())
+								synchronized = barrier.ContainerID == barrierID
+							}
+						case streamErr := <-eventErrors:
+							Fail(fmt.Sprintf("event subscription failed before barrier: %v", streamErr))
+						case <-eventCtx.Done():
+							Fail("event subscription barrier deadline exceeded")
+						}
+					}
+					fmt.Fprintf(GinkgoWriter, "CFAR1508 subscription synchronized id=%s\n", containerID)
+					if os.Getenv("NERD_TEST_CREATED_INVALID_START") == "true" {
+						startErr := cnerd.Start(testLogger, containerID)
+						Expect(startErr).To(HaveOccurred())
+						fmt.Fprintf(GinkgoWriter, "CFAR1508 invalid command Start rejected id=%s error=%v\n", containerID, startErr)
+					}
+					if os.Getenv("NERD_TEST_CREATED_CALLER") == "true" {
+						err = cnerd.Delete(testLogger, containerID)
+					} else {
+						_, err = containerdClient.TaskService().Delete(ctx, &tasksapi.DeleteTaskRequest{ContainerID: containerID})
+					}
+					Expect(err).NotTo(HaveOccurred())
+					_, _, deletedStateErr := cnerd.State(testLogger, containerID)
+					Expect(deletedStateErr).To(BeAssignableToTypeOf(runcontainerd.TaskNotFoundError{}))
+					Eventually(func() error { return taskProcessesGone(identities, procStat) }, "10s", "100ms").Should(Succeed())
+					fmt.Fprintf(GinkgoWriter, "CFAR1508 direct-delete task and captured runtime processes absent id=%s\n", containerID)
+					deleted := false
+					for !deleted {
+						select {
+						case envelope := <-eventStream:
+							Expect(envelope).NotTo(BeNil())
+							decoded, decodeErr := typeurl.UnmarshalAny(envelope.Event)
+							Expect(decodeErr).NotTo(HaveOccurred())
+							fmt.Fprintf(GinkgoWriter, "CFAR1508 event topic=%s event=%+v\n", envelope.Topic, decoded)
+							switch event := decoded.(type) {
+							case *apievents.TaskStart:
+								Expect(event.ContainerID).NotTo(Equal(containerID))
+							case *apievents.TaskExit:
+								Expect(event.ContainerID).NotTo(Equal(containerID))
+							case *apievents.TaskDelete:
+								deleted = event.ContainerID == containerID
+							}
+						case streamErr := <-eventErrors:
+							Fail(fmt.Sprintf("event stream ended before TaskDelete: %v", streamErr))
+						case <-eventCtx.Done():
+							Fail("no TaskDelete event before diagnostic deadline")
+						}
+					}
+					if os.Getenv("NERD_TEST_CREATED_CALLER") == "true" {
+						nextID := containerID + "-next"
+						defer func() {
+							Expect(cnerd.Delete(testLogger, nextID)).To(Succeed())
+							Expect(cnerd.RemoveBundle(testLogger, nextID)).To(Succeed())
+						}()
+						nextSpec := *spec
+						nextProcess := *spec.Process
+						nextProcess.Args = []string{"/bin/sleep", "1000"}
+						nextSpec.Process = &nextProcess
+						Expect(cnerd.Create(testLogger, nextID, &nextSpec, maximusUID, maximusGID, initProcessIO)).To(Succeed())
+						nextPID, _, nextErr := cnerd.State(testLogger, nextID)
+						Expect(nextErr).NotTo(HaveOccurred())
+						nextIdentities, captureErr := captureTaskProcesses(nextPID, nextID)
+						Expect(captureErr).NotTo(HaveOccurred())
+						Expect(cnerd.Start(testLogger, nextID)).To(Succeed())
+						Expect(cnerd.Delete(testLogger, nextID)).To(Succeed())
+						Eventually(func() error { return taskProcessesGone(nextIdentities, procStat) }, "10s", "100ms").Should(Succeed())
+						var lifecycle []string
+						for len(lifecycle) < 3 {
+							select {
+							case envelope := <-eventStream:
+								Expect(envelope).NotTo(BeNil())
+								decoded, decodeErr := typeurl.UnmarshalAny(envelope.Event)
+								Expect(decodeErr).NotTo(HaveOccurred())
+								var eventID string
+								switch event := decoded.(type) {
+								case *apievents.TaskStart:
+									eventID = event.ContainerID
+								case *apievents.TaskExit:
+									eventID = event.ContainerID
+								case *apievents.TaskDelete:
+									eventID = event.ContainerID
+								}
+								if eventID == nextID {
+									lifecycle = append(lifecycle, envelope.Topic)
+								}
+							case streamErr := <-eventErrors:
+								Fail(fmt.Sprintf("subsequent lifecycle event stream: %v", streamErr))
+							case <-eventCtx.Done():
+								Fail(fmt.Sprintf("subsequent lifecycle event deadline: %v", lifecycle))
+							}
+						}
+						Expect(lifecycle).To(Equal([]string{"/tasks/start", "/tasks/exit", "/tasks/delete"}))
+						fmt.Fprintf(GinkgoWriter, "CFAR1508 subsequent started lifecycle clean id=%s events=%v\n", nextID, lifecycle)
+					}
+				} else {
+					err = standardDeleter.Delete(testLogger, containerID)
+				}
+				finalPID, finalState, stateErr := cnerd.State(testLogger, containerID)
+				fmt.Fprintf(GinkgoWriter, "CFAR1508 standard-delete end elapsed=%s error=%v pid=%d state=%s state_error=%v\n", time.Since(started), err, finalPID, finalState, stateErr)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stateErr).To(BeAssignableToTypeOf(runcontainerd.TaskNotFoundError{}))
+				Eventually(func() error { return taskProcessesGone(identities, procStat) }, "10s", "100ms").Should(Succeed())
+				Expect(cnerd.Delete(testLogger, containerID)).To(Succeed())
 			})
 		})
 	})
