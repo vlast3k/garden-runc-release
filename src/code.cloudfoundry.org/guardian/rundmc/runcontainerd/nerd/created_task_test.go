@@ -51,7 +51,12 @@ func TestDeleteCreatedTask(t *testing.T) {
 				}
 				return &tasksapi.DeleteResponse{}, testCase.rpcError
 			}}
-			err := deleteCreatedTask(context.Background(), service, "created-task", taskIO, metrics.NewMetricsProvider(lagertest.NewTestLogger("created-task"), t.TempDir()))
+			mp := metrics.NewMetricsProvider(lagertest.NewTestLogger("created-task"), t.TempDir())
+			mp.RegisterUnkillableContainer("created-task")
+			err := deleteCreatedTask(context.Background(), service, "created-task", taskIO, mp)
+			if (mp.UnkillableContainers() == 0) != testCase.wantClosed {
+				t.Fatal("unkillable metric did not track accepted task deletion independently of IO close")
+			}
 			if !called {
 				t.Fatal("public Delete was not called")
 			}

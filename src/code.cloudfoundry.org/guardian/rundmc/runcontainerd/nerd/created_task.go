@@ -21,6 +21,7 @@ func deleteCreatedTask(ctx context.Context, service tasksapi.TasksClient, contai
 		}
 		return errgrpc.ToNative(err)
 	}
+	mp.RegisterKillableContainer(containerID)
 	if taskIO != nil {
 		taskIO.Cancel()
 		taskIO.Wait()
@@ -28,6 +29,5 @@ func deleteCreatedTask(ctx context.Context, service tasksapi.TasksClient, contai
 			return err
 		}
 	}
-	mp.RegisterKillableContainer(containerID)
 	return nil
 }
