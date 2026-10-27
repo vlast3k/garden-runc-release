@@ -14,7 +14,7 @@
   },
   "guardian": {
     "path": "src/code.cloudfoundry.org/guardian",
-    "tree": "26b9f00d4f64d99cea6c4688394f9997971cacf3",
+    "tree": "f42ef932bb67108923d0e0eb187d6dee63ce7d79",
     "upstream_revision": "90175b24cfcdaafc1f5e26a060251423a53805a3",
     "ported_revision": "e4e266e0dad0e2957f5920b927a7f86776f447ff",
     "ported_repository": "https://github.tools.sap/cp-runtime/guardian.git"
@@ -30,7 +30,7 @@
         {
           "kind": "unit",
           "path": "rundmc/runcontainerd/nerd/nerd_linux_test.go",
-          "selector": "deletes a created alternative-runtime task using the required shim cleanup"
+          "selector": "deletes a created alternative-runtime task through public TaskService"
         }
       ]
     }
@@ -44,10 +44,10 @@
         {
           "kind": "unit",
           "path": "rundmc/runcontainerd/nerd/nerd_linux_test.go",
-          "selector": "deletes a created alternative-runtime task using the required shim cleanup"
+          "selector": "deletes a created alternative-runtime task through public TaskService"
         }
       ],
-      "limitation": "Native Linux full Nerd gate passes for this inline Guardian tree: runsc 48/48 with no skips and stock 47/48 with one alternative-runtime-only skip; both cleanup_rc=0. Binary SHA-256 3117b7094f5b8225a1b2506348c76d1af0345019ad6ac3ddb921f77c395615c5. Exact commands, retained failed attempts and raw log hashes are in docs/CFAR-1536-MIGRATION.md. Final native release is installed on all four t09a cells; the declared CF matrix and rollback/re-upgrade pass. Reviewed final parent adoption remains unverified; metadata alone is not runtime acceptance or approval to remove cleanup7."
+      "limitation": "CFAR-1508 replaces direct shim killing with public TaskService Delete for CREATED runsc tasks. Exact clean gVisor5e3b88bc and Guardianf62b7126 actual caller9/9, full Nerd runsc49/49, stock47/49(two expected skips), real Garden pre-CNI3/3 passed with cleanup0 and owned-name cgroup inventory restored before daemon teardown. Raw gen/cfar1508-final-callers-v3.log SHA2560a1f3638e8a723d7d1ac556375bcfc42dde970deab8b51be3b353d3e2d52df17. Earlier stock PTY exit129 failures remain retained, not waived. This successor additionally clears stale timeout marks on idempotent caller-level Task/ContainerNotFound. Native public-gRPC timeout/retry baseline and restored cases PASS; old-behavior control fails exact stale-metric assertions in both branches. Raw gen/cfar1508-retry-metric-check-v1.log SHA256d10ff7c00b1e1a29df36b5f48a205be0fcf9d3fce1780fbab5a858b497a3369a. Clean successor build/integration revalidation, native parent, immutable package canary, rollback and sequential rollout remain required before adoption. Installed Garden remains cleanup7 baseline; see parent docs/validation/CFAR-1508-LIFECYCLE.md."
     }
   ]
 }
