@@ -145,9 +145,11 @@ func (n *Nerd) Delete(log lager.Logger, containerID string) error {
 		switch err.(type) {
 		case runcontainerd.ContainerNotFoundError:
 			log.Debug("container-already-deleted", lager.Data{"containerID": containerID})
+			n.mp.RegisterKillableContainer(containerID)
 			return nil
 		case runcontainerd.TaskNotFoundError:
 			log.Debug("task-already-deleted", lager.Data{"containerID": containerID})
+			n.mp.RegisterKillableContainer(containerID)
 			return nil
 		}
 		return err

@@ -14,7 +14,7 @@
   },
   "guardian": {
     "path": "src/code.cloudfoundry.org/guardian",
-    "tree": "4fa4236c479745a495f5a6f975b477452810f81b",
+    "tree": "f42ef932bb67108923d0e0eb187d6dee63ce7d79",
     "upstream_revision": "90175b24cfcdaafc1f5e26a060251423a53805a3",
     "ported_revision": "e4e266e0dad0e2957f5920b927a7f86776f447ff",
     "ported_repository": "https://github.tools.sap/cp-runtime/guardian.git"
@@ -47,7 +47,7 @@
           "selector": "deletes a created alternative-runtime task through public TaskService"
         }
       ],
-      "limitation": "CFAR-1508 candidate replaces direct shim killing with public TaskService Delete for CREATED runsc tasks. Actual caller matrix9/9, full Nerd runsc49/49 and stock47/49(two expected skips), real Garden pre-CNI3/3 passed with matched gVisor3d1826af artifacts and production Guardian1621c36d. Broader native Rundmc/guardiancmd/netplugin suites passed with this exact inline test repair: policy fixture intercepts public Delete instead of expecting removed cleanup7 PID guard; streaming fake releases Wait on SignalKill and asserts existing discard-after-close semantics. Raw gen/cfar1508-final-guardian-v2.log SHA256aac6370b6ef77e6c01896a67dbf49e9e9e9510127507ccbb73cf35664043a300. Later gVisor concurrency source repairs require new matched artifact validation. Installed Garden remains cleanup7 baseline. Native parent, immutable package canary, rollback and sequential rollout remain required before adoption; see parent docs/validation/CFAR-1508-LIFECYCLE.md."
+      "limitation": "CFAR-1508 replaces direct shim killing with public TaskService Delete for CREATED runsc tasks. Exact clean gVisor5e3b88bc and Guardianf62b7126 actual caller9/9, full Nerd runsc49/49, stock47/49(two expected skips), real Garden pre-CNI3/3 passed with cleanup0 and owned-name cgroup inventory restored before daemon teardown. Raw gen/cfar1508-final-callers-v3.log SHA2560a1f3638e8a723d7d1ac556375bcfc42dde970deab8b51be3b353d3e2d52df17. Earlier stock PTY exit129 failures remain retained, not waived. This successor additionally clears stale timeout marks on idempotent caller-level Task/ContainerNotFound. Native public-gRPC timeout/retry baseline and restored cases PASS; old-behavior control fails exact stale-metric assertions in both branches. Raw gen/cfar1508-retry-metric-check-v1.log SHA256d10ff7c00b1e1a29df36b5f48a205be0fcf9d3fce1780fbab5a858b497a3369a. Clean successor build/integration revalidation, native parent, immutable package canary, rollback and sequential rollout remain required before adoption. Installed Garden remains cleanup7 baseline; see parent docs/validation/CFAR-1508-LIFECYCLE.md."
     }
   ]
 }
