@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd/nerdfakes"
 	tasksapi "github.com/containerd/containerd/api/services/tasks/v1"
+	"github.com/containerd/containerd/v2/pkg/cio"
 	"github.com/containerd/errdefs"
 	"github.com/containerd/errdefs/pkg/errgrpc"
 	"google.golang.org/grpc"
@@ -59,5 +60,30 @@ func TestDeleteCreatedTask(t *testing.T) {
 				t.Fatalf("unexpected IO lifecycle cancel=%d wait=%d close=%d", taskIO.CancelCallCount(), taskIO.WaitCallCount(), taskIO.CloseCallCount())
 			}
 		})
+	}
+}
+
+func TestDeleteCreatedTaskLoadedIO(t *testing.T) {
+	deleted := false
+	closed := false
+	taskIO, err := cio.Load(cio.NewFIFOSet(cio.Config{}, func() error {
+		if !deleted {
+			t.Fatal("loaded IO closed before public task deletion")
+		}
+		closed = true
+		return nil
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := createdDeleteService{delete: func(context.Context, *tasksapi.DeleteTaskRequest) (*tasksapi.DeleteResponse, error) {
+		deleted = true
+		return &tasksapi.DeleteResponse{}, nil
+	}}
+	if err := deleteCreatedTask(t.Context(), service, "created-task", taskIO); err != nil {
+		t.Fatal(err)
+	}
+	if !deleted || !closed {
+		t.Fatalf("loaded IO cleanup incomplete deleted=%t closed=%t", deleted, closed)
 	}
 }
