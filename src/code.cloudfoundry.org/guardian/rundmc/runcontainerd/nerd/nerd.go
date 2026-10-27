@@ -161,10 +161,9 @@ func (n *Nerd) Delete(log lager.Logger, containerID string) error {
 	if status.Status == client.Created && task.Pid() != 0 && n.policy == runcontainerd.RunscRuntime {
 		ctx, cancel := context.WithTimeout(n.context, 2*time.Minute)
 		defer cancel()
-		if err := deleteCreatedTask(ctx, n.client.TaskService(), containerID, task.IO()); err != nil {
+		if err := deleteCreatedTask(ctx, n.client.TaskService(), containerID, task.IO(), n.mp); err != nil {
 			return err
 		}
-		n.mp.RegisterKillableContainer(task.ID())
 		return nil
 	}
 	_, err = task.Delete(n.context, withProcessKillLogging(log, n.mp))
