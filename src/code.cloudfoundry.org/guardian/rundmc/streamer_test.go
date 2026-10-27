@@ -329,9 +329,14 @@ var _ = Describe("ExecStreamer", func() {
 			})
 		})
 
-		It("rejects writes after the reader closes", func() {
+		It("discards writes after the reader closes", func() {
 			tarProc := new(gardenfakes.FakeProcess)
 			waitDone := make(chan struct{})
+			tarProc.SignalStub = func(signal garden.Signal) error {
+				Expect(signal).To(Equal(garden.SignalKill))
+				close(waitDone)
+				return nil
+			}
 			tarProc.WaitStub = func() (int, error) {
 				<-waitDone
 				return 0, nil
@@ -348,17 +353,10 @@ var _ = Describe("ExecStreamer", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			// Close reader early — with io.Pipe this immediately marks
-			// the pipe done, so subsequent writes return ErrClosedPipe.
-			reader.Close()
-
-			// Unblock Wait so the goroutine's writer.Close completes.
-			close(waitDone)
-
-			// Writing to the pipe after reader.Close returns an error
-			// immediately because io.Pipe checks done before blocking.
-			_, writeErr := writerFromPIO.Write([]byte("data"))
-			Expect(writeErr).To(HaveOccurred())
+			Expect(reader.Close()).To(Succeed())
+			written, writeErr := writerFromPIO.Write([]byte("data"))
+			Expect(writeErr).NotTo(HaveOccurred())
+			Expect(written).To(Equal(len("data")))
 		})
 	})
 })

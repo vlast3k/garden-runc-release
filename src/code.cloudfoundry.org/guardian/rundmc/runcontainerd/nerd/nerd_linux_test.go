@@ -83,6 +83,12 @@ type policyTasksServer struct {
 	tasksapi.UnimplementedTasksServer
 	created chan *tasksapi.CreateTaskRequest
 	killed  chan string
+	deleted chan string
+}
+
+func (rpc *policyTasksServer) Delete(_ context.Context, request *tasksapi.DeleteTaskRequest) (*tasksapi.DeleteResponse, error) {
+	rpc.deleted <- request.ContainerID
+	return nil, status.Error(codes.PermissionDenied, "policy fixture stops before public task deletion")
 }
 
 func (rpc *policyTasksServer) Create(_ context.Context, request *tasksapi.CreateTaskRequest) (*tasksapi.CreateTaskResponse, error) {
@@ -132,7 +138,7 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 				t.Fatal(err)
 			}
 			containerRPC := &policyContainersServer{created: make(chan *containersapi.Container, 1)}
-			taskRPC := &policyTasksServer{created: make(chan *tasksapi.CreateTaskRequest, 1), killed: make(chan string, 1)}
+			taskRPC := &policyTasksServer{created: make(chan *tasksapi.CreateTaskRequest, 1), killed: make(chan string, 1), deleted: make(chan string, 1)}
 			rpcServer := grpc.NewServer()
 			containersapi.RegisterContainersServer(rpcServer, containerRPC)
 			tasksapi.RegisterTasksServer(rpcServer, taskRPC)
@@ -238,8 +244,16 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 					t.Error("stock Delete did not reach ordinary task cleanup before the test deadline")
 				}
 			} else {
-				if !os.IsNotExist(err) || !strings.Contains(err.Error(), "/proc/4294967295/status") {
-					t.Errorf("runsc Delete error = %v, want unverified PID rejection before signaling", err)
+				if err == nil || !strings.Contains(err.Error(), "policy fixture stops before public task deletion") {
+					t.Errorf("runsc Delete error = %v, want public TaskService.Delete rejection", err)
+				}
+				select {
+				case id := <-taskRPC.deleted:
+					if id != "policy-container" {
+						t.Errorf("Delete container = %q", id)
+					}
+				case <-ctx.Done():
+					t.Error("runsc Delete did not reach public task deletion before the test deadline")
 				}
 				select {
 				case id := <-taskRPC.killed:

@@ -14,7 +14,7 @@
   },
   "guardian": {
     "path": "src/code.cloudfoundry.org/guardian",
-    "tree": "51bc83a4eb63158217d39f32878e760f2fa31f60",
+    "tree": "f93fbf171ec5abd136f43bf455f0008b91d5c258",
     "upstream_revision": "90175b24cfcdaafc1f5e26a060251423a53805a3",
     "ported_revision": "e4e266e0dad0e2957f5920b927a7f86776f447ff",
     "ported_repository": "https://github.tools.sap/cp-runtime/guardian.git"
@@ -47,7 +47,7 @@
           "selector": "deletes a created alternative-runtime task through public TaskService"
         }
       ],
-      "limitation": "CFAR-1508 source candidate replaces direct shim killing with public TaskService Delete for CREATED runsc tasks. Exact actual caller matrix passed nine native private-namespace runs with gVisor f56608dd8dded47a6ebcbfe0a91c7eb80f515a14 matched artifacts: CREATED, daemon restart and invalid Start, each followed by normal Start/Exit/Delete. Installed Garden remains the cleanup7 baseline. Full component, real pre-CNI, immutable canary and rollback gates remain required before adoption; see parent docs/validation/CFAR-1508-LIFECYCLE.md."
+      "limitation": "CFAR-1508 candidate replaces direct shim killing with public TaskService Delete for CREATED runsc tasks. Actual caller matrix9/9, full Nerd runsc49/49 and stock47/49(two expected skips), real Garden pre-CNI3/3 passed with matched gVisor3d1826af artifacts and production Guardian1621c36d. Broader native Rundmc/guardiancmd/netplugin suites passed with this exact inline test repair: policy fixture intercepts public Delete instead of expecting removed cleanup7 PID guard; streaming fake releases Wait on SignalKill and asserts existing discard-after-close semantics. Raw gen/cfar1508-final-guardian-v2.log SHA256aac6370b6ef77e6c01896a67dbf49e9e9e9510127507ccbb73cf35664043a300. Later gVisor concurrency source repairs require new matched artifact validation. Installed Garden remains cleanup7 baseline. Native parent, immutable package canary, rollback and sequential rollout remain required before adoption; see parent docs/validation/CFAR-1508-LIFECYCLE.md."
     }
   ]
 }
