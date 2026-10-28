@@ -149,6 +149,7 @@ var _ = Describe("PeaCreator", func() {
 
 		It("rejects nonzero limits for a grouped runsc pea before preparing its image", func() {
 			peaCreator.GroupedRunsc = true
+			bundleGenerator.GenerateReturns(goci.Bundle(), nil)
 			for _, limits := range []garden.ProcessLimits{
 				{CPU: garden.CPULimits{Weight: 1}},
 				{CPU: garden.CPULimits{LimitInShares: 1}},
