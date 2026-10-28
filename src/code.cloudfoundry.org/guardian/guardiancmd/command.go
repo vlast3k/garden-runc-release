@@ -327,7 +327,7 @@ func (cmd *CommonCommand) wirePeaCleaner(factory GardenFactory, volumizer garden
 		nerdDeleter := runcontainerd.NewDeleter(runtime)
 		cleaner := peas.NewPeaCleaner(deleter.NewDeleter(runtime, nerdDeleter), volumizer, runtime, pidGetter)
 		if imageBacked {
-			cleaner.(*peas.PeaCleaner).TaskWaiter = runtime.(*runcontainerd.RunContainerd).WaitPea
+			cleaner.(*peas.PeaCleaner).TaskWaitAndCleaner = runtime.(*runcontainerd.RunContainerd).WaitAndCleanPea
 		}
 		return cleaner
 	}

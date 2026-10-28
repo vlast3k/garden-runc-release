@@ -10,6 +10,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -35,6 +36,8 @@ type Nerd struct {
 	ioFifoDir string
 	mp        *metrics.MetricsProvider
 	policy    runcontainerd.RuntimePolicy
+	peaIOMu   sync.Mutex
+	peaTasks  map[string]client.Task
 }
 
 func New(client *client.Client, context context.Context, ioFifoDir string, mp *metrics.MetricsProvider, policy runcontainerd.RuntimePolicy) *Nerd {
@@ -44,6 +47,7 @@ func New(client *client.Client, context context.Context, ioFifoDir string, mp *m
 		ioFifoDir: ioFifoDir,
 		mp:        mp,
 		policy:    policy,
+		peaTasks:  make(map[string]client.Task),
 	}
 }
 
@@ -102,7 +106,12 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 		// runsc manages its own keyring and UID/GID via the OCI spec.
 		taskOpts = append(taskOpts, client.WithNoNewKeyring, WithUIDAndGID(hostUID, hostGID))
 	}
-	_, err = container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), taskOpts...)
+	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), taskOpts...)
+	if err == nil && spec.Annotations["container-type"] == "pea" {
+		n.peaIOMu.Lock()
+		n.peaTasks[containerID] = task
+		n.peaIOMu.Unlock()
+	}
 	return err
 }
 
@@ -160,7 +169,12 @@ func withProcessKillLogging(log lager.Logger, mp *metrics.MetricsProvider) func(
 	}
 }
 
-func (n *Nerd) Delete(log lager.Logger, containerID string) error {
+func (n *Nerd) Delete(log lager.Logger, containerID string) (result error) {
+	defer func() {
+		if result == nil {
+			result = n.releasePeaIO(containerID)
+		}
+	}()
 	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
 		switch err.(type) {
@@ -308,12 +322,52 @@ func (n *Nerd) GetProcess(log lager.Logger, containerID, processID string) (runc
 
 func (n *Nerd) GetTask(log lager.Logger, id string) (runcontainerd.BackingProcess, error) {
 	log.Debug("get-task", lager.Data{"id": id})
+	n.peaIOMu.Lock()
+	created := n.peaTasks[id]
+	n.peaIOMu.Unlock()
+	if created != nil {
+		// Wait must drain the actual creator's IO, not cio.Load's no-op Wait.
+		return NewBackingProcess(log, created, n.context), nil
+	}
 	_, task, err := n.loadContainerAndTask(log, id)
 	if err != nil {
 		return BackingProcess{}, err
 	}
 
 	return NewBackingProcess(log, task, n.context), nil
+}
+
+func (n *Nerd) AttachTask(log lager.Logger, id string, pio garden.ProcessIO) (runcontainerd.BackingProcess, error) {
+	container, err := n.loadContainer(log, id)
+	if err != nil {
+		return nil, err
+	}
+	n.peaIOMu.Lock()
+	defer n.peaIOMu.Unlock()
+	if n.peaTasks[id] != nil {
+		return nil, fmt.Errorf("pea %s already has a task IO reader", id)
+	}
+	task, err := container.Task(n.context, cio.NewAttach(cio.WithStreams(nil, orDiscard(pio.Stdout), orDiscard(pio.Stderr))))
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			return nil, runcontainerd.TaskNotFoundError{Handle: id}
+		}
+		return nil, err
+	}
+	n.peaTasks[id] = task
+	return NewBackingProcess(log, task, n.context), nil
+}
+
+func (n *Nerd) releasePeaIO(id string) error {
+	n.peaIOMu.Lock()
+	task := n.peaTasks[id]
+	delete(n.peaTasks, id)
+	n.peaIOMu.Unlock()
+	if task != nil && task.IO() != nil {
+		task.IO().Cancel()
+		return task.IO().Close()
+	}
+	return nil
 }
 
 func exponentialBackoffCloseIO(process client.Process, ctx context.Context, log lager.Logger, containerID string) {

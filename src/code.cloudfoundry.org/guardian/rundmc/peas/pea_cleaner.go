@@ -16,6 +16,8 @@ type PeaCleaner struct {
 	// TaskWaiter is set for grouped runsc children: their host PID identifies
 	// the shared Sentry, not the lifetime of the individual child init task.
 	TaskWaiter func(log lager.Logger, handle string) error
+	// TaskWaitAndCleaner owns both Wait and cleanup with attached callers.
+	TaskWaitAndCleaner func(log lager.Logger, handle string) error
 }
 
 //counterfeiter:generate . Runtime
@@ -80,6 +82,14 @@ func (p *PeaCleaner) CleanAll(log lager.Logger) error {
 		}
 
 		for _, peaHandle := range peaHandles {
+			if p.TaskWaitAndCleaner != nil {
+				go func(handle string) {
+					if err := p.TaskWaitAndCleaner(log, handle); err != nil {
+						log.Error("error-waiting-and-cleaning-pea-task", err, lager.Data{"peaHandle": handle})
+					}
+				}(peaHandle)
+				continue
+			}
 			if p.TaskWaiter != nil {
 				go func(handle string) {
 					if err := p.TaskWaiter(log, handle); err != nil {

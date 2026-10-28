@@ -91,6 +91,7 @@ type RunContainerd struct {
 	peaHandlesGetter          PeaHandlesGetter
 	cleanupProcessDirsOnWait  bool
 	runtimeStopper            RuntimeStopper
+	peaRunner                 *RunContainerPea
 }
 
 func New(containerManager ContainerManager,
@@ -257,6 +258,18 @@ func (r *RunContainerd) getBundle(log lager.Logger, containerID string) (goci.Bn
 }
 
 func (r *RunContainerd) Attach(log lager.Logger, sandboxID, processID string, io garden.ProcessIO) (garden.Process, error) {
+	if r.peaRunner != nil {
+		spec, err := r.containerManager.Spec(log, processID)
+		if err == nil && spec != nil && spec.Annotations["container-type"] == "pea" {
+			if spec.Annotations["sandbox-container"] != sandboxID {
+				return nil, garden.ProcessNotFoundError{ProcessID: processID}
+			}
+			return r.peaRunner.Attach(log, sandboxID, processID, io)
+		}
+		if err != nil && !isNotFound(err) {
+			return nil, err
+		}
+	}
 	if !r.useContainerdForProcesses {
 		return r.execer.Attach(log, sandboxID, processID, io)
 	}
@@ -270,6 +283,30 @@ func (r *RunContainerd) Attach(log lager.Logger, sandboxID, processID string, io
 		return nil, err
 	}
 	return NewProcess(log, process, r.cleanupProcessDirsOnWait), nil
+}
+
+// WaitAndCleanPea gives restart cleanup the same Wait/deletion owner as Attach.
+// Do not follow it with another image deletion.
+func (r *RunContainerd) WaitAndCleanPea(log lager.Logger, id string) error {
+	if r.peaRunner == nil {
+		return fmt.Errorf("image-backed pea lifecycle is unavailable")
+	}
+	spec, err := r.containerManager.Spec(log, id)
+	if err != nil {
+		if isNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if spec == nil || spec.Annotations["container-type"] != "pea" || spec.Annotations["sandbox-container"] == "" {
+		return fmt.Errorf("%s is not an owned image-backed pea", id)
+	}
+	process, err := r.peaRunner.Attach(log, spec.Annotations["sandbox-container"], id, garden.ProcessIO{})
+	if err != nil {
+		return err
+	}
+	_, err = process.Wait()
+	return err
 }
 
 func (r *RunContainerd) Delete(log lager.Logger, id string) error {
