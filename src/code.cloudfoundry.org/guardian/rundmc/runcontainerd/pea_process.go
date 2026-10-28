@@ -10,16 +10,18 @@ import (
 
 type PeaProcess struct {
 	Process
-	peaManager PeaManager
-	volumizer  Volumizer
-	waitOnce   sync.Once
-	exitCode   int
-	waitErr    error
-	stateMu    sync.Mutex
-	exited     bool
-	cleanupMu  sync.Mutex
-	cleaned    bool
-	onClean    func()
+	peaManager     PeaManager
+	volumizer      Volumizer
+	waitOnce       sync.Once
+	exitCode       int
+	waitErr        error
+	stateMu        sync.Mutex
+	exited         bool
+	cleanupMu      sync.Mutex
+	taskDeleted    bool
+	imageDestroyed bool
+	cleaned        bool
+	onClean        func()
 }
 
 func NewPeaProcess(log lager.Logger, process Process, peaManager PeaManager, volumizer Volumizer) *PeaProcess {
@@ -50,15 +52,21 @@ func (p *PeaProcess) Wait() (int, error) {
 		return p.exitCode, nil
 	}
 
-	if err := p.peaManager.Delete(p.log, p.ID()); err != nil {
-		return 0, err
+	if !p.taskDeleted {
+		if err := p.peaManager.Delete(p.log, p.ID()); err != nil {
+			return 0, err
+		}
+		p.taskDeleted = true
 	}
-
+	// Keep the ownership metadata while image deletion is fallible, so a
+	// restarted cleaner can discover an orphan and an ID cannot be reused.
+	if !p.imageDestroyed {
+		if err := p.volumizer.Destroy(p.log, p.ID()); err != nil {
+			return 0, err
+		}
+		p.imageDestroyed = true
+	}
 	if err := p.peaManager.RemoveBundle(p.log, p.ID()); err != nil {
-		return 0, err
-	}
-
-	if err := p.volumizer.Destroy(p.log, p.ID()); err != nil {
 		return 0, err
 	}
 

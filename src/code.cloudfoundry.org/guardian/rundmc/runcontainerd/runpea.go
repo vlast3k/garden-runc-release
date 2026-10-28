@@ -160,3 +160,26 @@ func (r *RunContainerPea) Attach(log lager.Logger, parent, id string, pio garden
 	}
 	return entry.process, nil
 }
+
+// cleanMissingTask is used only after an owned pea's task was reported absent.
+// Confirm absence via Delete before touching its image. No exit code or Wait is
+// fabricated: this cleans an orphan whose original Wait result is unavailable.
+func (r *RunContainerPea) cleanMissingTask(log lager.Logger, parent, id string) error {
+	r.mu.Lock()
+	if entry := r.processes[id]; entry != nil {
+		r.mu.Unlock()
+		if entry.parent != parent {
+			return garden.ProcessNotFoundError{ProcessID: id}
+		}
+		_, err := entry.process.Wait()
+		return err
+	}
+	defer r.mu.Unlock()
+	if err := r.peaManager.Delete(log, id); err != nil {
+		return err
+	}
+	if err := r.volumizer.Destroy(log, id); err != nil {
+		return err
+	}
+	return r.peaManager.RemoveBundle(log, id)
+}

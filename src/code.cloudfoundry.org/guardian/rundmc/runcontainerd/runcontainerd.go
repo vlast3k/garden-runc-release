@@ -303,6 +303,10 @@ func (r *RunContainerd) WaitAndCleanPea(log lager.Logger, id string) error {
 	}
 	process, err := r.peaRunner.Attach(log, spec.Annotations["sandbox-container"], id, garden.ProcessIO{})
 	if err != nil {
+		var noTask TaskNotFoundError
+		if errors.As(err, &noTask) {
+			return r.peaRunner.cleanMissingTask(log, spec.Annotations["sandbox-container"], id)
+		}
 		return err
 	}
 	_, err = process.Wait()

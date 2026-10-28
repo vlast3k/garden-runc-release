@@ -10,9 +10,52 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/runcontainerdfakes"
+	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
+
+type missingTaskAttacher struct {
+	*runcontainerdfakes.FakeProcessManager
+}
+
+func (m missingTaskAttacher) AttachTask(_ lager.Logger, id string, _ garden.ProcessIO) (runcontainerd.BackingProcess, error) {
+	return nil, runcontainerd.TaskNotFoundError{Handle: id}
+}
+
+func TestPeaImageCleanupRetainsOwnershipAndRetriesOnce(t *testing.T) {
+	log := lagertest.NewTestLogger("pea-image-retry")
+	backing := &runcontainerdfakes.FakeBackingProcess{}
+	backing.IDReturns("child")
+	backing.WaitReturns(42, nil)
+	manager := &runcontainerdfakes.FakePeaManager{}
+	volume := &runcontainerdfakes.FakeVolumizer{}
+	volume.DestroyReturnsOnCall(0, errors.New("image busy"))
+	p := runcontainerd.NewPeaProcess(log, *runcontainerd.NewProcess(log, backing, false), manager, volume)
+	if _, err := p.Wait(); err == nil || manager.RemoveBundleCallCount() != 0 {
+		t.Fatal("failed image deletion lost ownership metadata")
+	}
+	if code, err := p.Wait(); err != nil || code != 42 || manager.DeleteCallCount() != 1 || manager.RemoveBundleCallCount() != 1 || volume.DestroyCallCount() != 2 {
+		t.Fatalf("image retry = %d, %v", code, err)
+	}
+}
+
+func TestPeaRestartCleansMissingTaskWithoutInventingWait(t *testing.T) {
+	log := lagertest.NewTestLogger("pea-orphan")
+	manager := &runcontainerdfakes.FakeContainerManager{}
+	manager.SpecReturns(&specs.Spec{Annotations: map[string]string{"container-type": "pea", "sandbox-container": "parent"}}, nil)
+	processes := missingTaskAttacher{&runcontainerdfakes.FakeProcessManager{}}
+	runtime := runcontainerd.New(manager, processes, nil, nil, nil, nil, false, nil, nil, nil, false, nil)
+	volume := &runcontainerdfakes.FakeVolumizer{}
+	volume.DestroyReturnsOnCall(0, errors.New("image busy"))
+	runcontainerd.NewRunContainerPea(runtime, processes, volume, false)
+	if err := runtime.WaitAndCleanPea(log, "child"); err == nil || manager.RemoveBundleCallCount() != 0 {
+		t.Fatal("orphan cleanup lost ownership before deleting image")
+	}
+	if err := runtime.WaitAndCleanPea(log, "child"); err != nil || manager.RemoveBundleCallCount() != 1 || volume.DestroyCallCount() != 2 || processes.GetTaskCallCount() != 0 {
+		t.Fatalf("orphan cleanup = %v", err)
+	}
+}
 
 func TestPeaConcurrentWaitAndCleanupRetry(t *testing.T) {
 	log := lagertest.NewTestLogger("pea-wait")
