@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/metrics"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/lager/v3"
@@ -40,9 +41,9 @@ type Nerd struct {
 	peaTasks  map[string]client.Task
 }
 
-func New(client *client.Client, context context.Context, ioFifoDir string, mp *metrics.MetricsProvider, policy runcontainerd.RuntimePolicy) *Nerd {
+func New(containerdClient *client.Client, context context.Context, ioFifoDir string, mp *metrics.MetricsProvider, policy runcontainerd.RuntimePolicy) *Nerd {
 	return &Nerd{
-		client:    client,
+		client:    containerdClient,
 		context:   context,
 		ioFifoDir: ioFifoDir,
 		mp:        mp,
