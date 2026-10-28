@@ -119,12 +119,14 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 		wantOptions       bool
 		annotations       map[string]string
 		wantContainerType string
+		wantSandboxID     string
 	}{
 		{wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true},
 		{runtimeType: "io.containerd.runc.v2", wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", wantContainerType: "sandbox"},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"sentinel": "retained"}, wantContainerType: "sandbox"},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"io.kubernetes.cri.container-type": "container"}, wantContainerType: "container"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent", "sentinel": "retained"}, wantContainerType: "container", wantSandboxID: "garden-parent"},
 	} {
 		t.Run(test.runtimeType, func(t *testing.T) {
 			socketDir, err := os.MkdirTemp("", "nerd-policy-")
@@ -200,6 +202,9 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 				}
 				if emitted.Annotations["io.kubernetes.cri.container-type"] != test.wantContainerType {
 					t.Errorf("container type = %q, want %q", emitted.Annotations["io.kubernetes.cri.container-type"], test.wantContainerType)
+				}
+				if emitted.Annotations["io.kubernetes.cri.sandbox-id"] != test.wantSandboxID {
+					t.Errorf("sandbox ID = %q, want %q", emitted.Annotations["io.kubernetes.cri.sandbox-id"], test.wantSandboxID)
 				}
 				if emitted.Annotations["sentinel"] != wantSentinel {
 					t.Error("unrelated annotation lost")

@@ -54,7 +54,16 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 		if spec.Annotations == nil {
 			spec.Annotations = make(map[string]string)
 		}
-		if _, exists := spec.Annotations["io.kubernetes.cri.container-type"]; !exists {
+		if spec.Annotations["container-type"] == "pea" {
+			parent := spec.Annotations["sandbox-container"]
+			if parent == "" || parent == containerID {
+				return fmt.Errorf("pea %s requires a distinct sandbox-container", containerID)
+			}
+			// Garden's labels also drive discovery and cleanup. Translate them at
+			// the runtime boundary so image-backed peas join the parent's Sentry.
+			spec.Annotations["io.kubernetes.cri.container-type"] = "container"
+			spec.Annotations["io.kubernetes.cri.sandbox-id"] = parent
+		} else if _, exists := spec.Annotations["io.kubernetes.cri.container-type"]; !exists {
 			spec.Annotations["io.kubernetes.cri.container-type"] = "sandbox"
 		}
 	}
