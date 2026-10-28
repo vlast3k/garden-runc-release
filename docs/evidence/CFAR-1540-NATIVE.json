@@ -1,9 +1,146 @@
 {
   "schema_version": 1,
-  "scope": "Native inline Garden image-backed peas; not packaged or shipped-CF acceptance",
+  "scope": "Native inline Garden image-backed peas; historical matrices retain their original identities. latest_followup identifies the current candidate; not packaged or live-CF acceptance",
   "garden_source": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
   "guardian_tree": "128ea6c11c1ed34bbf6b607c8ebdaf9bc5d70177",
   "gvisor_source": "3bd79c352df8cdbb01e807b7fb463244658fa990",
+  "latest_followup": {
+    "garden_source": "f07fd5ea737887e38c6607af567bc1a2d07ffe16",
+    "guardian_tree": "a407a3277d209d406954444c07199fcfb8527b95",
+    "publication": "S5, HTTP Attach and terminal repairs plus consolidated evidence published on cfar-1540-image-backed-peas in draft PR14; remote head verification recorded separately from tested f07 runtime-source identity",
+    "probe": {
+      "receipt": "bridge-build-v26.json",
+      "receipt_sha256": "e83145e4002424cf88af06b9868dbcb6067441ee221f498da6673a9eab336041",
+      "binary_sha256": "9f868f40a81a4c47e4de06473a43718f2cb4638946dcb7ab354b9b33c5a8d7d7",
+      "command": "tools/go/bin/go build -p=2 -trimpath -o tools/bin/bridge-probe-v26 bridge_probe_followup_v7.go shipped_peas_v1.go parentless_peas_v1.go probe_bounds_v1.go; cwd clean inline Guardian at f07fd5ea7",
+      "boundary": "Prepared-image campaigns below use this binary; later shipped probes have their own identities"
+    },
+    "source_repairs": [
+      {
+        "criterion": "Startup cleanup discovers a pea after parent metadata is gone",
+        "commit": "fdaee19d5adf3224546f88d73315f3af422c866d",
+        "implementation": "PeaCleaner uses RunContainerd.PeaHandles independent of parent enumeration and preserves discovery errors",
+        "status": "PASS",
+        "control": "Old 3c7e parent-only discovery fails TestPeaCleanerDiscoversChildrenWithoutParentMetadata; repaired focused/race/error/wiring checks and 176 Rundmc tests pass",
+        "raw": "pea-discovery-regression-v1.json",
+        "raw_sha256": "abb606cc32fc8bd16944c6a8d7206fc0988d1203e5d4c275f3b45fbcb672ac69"
+      },
+      {
+        "criterion": "Output-only Attach works through the actual Garden HTTP server",
+        "commit": "594d0ed3e1a8b7f4a792237ce9366a958a6064de",
+        "implementation": "Close Garden HTTP's unused io.PipeReader endpoint without forwarding input; reject other nonnil readers and preserve initial stdin",
+        "status": "PASS",
+        "control": "Old fdaee source fails TestPeaOutputOnlyAttachThroughGardenHTTP: output-only HTTP attachment rejected server input pipe: cannot attach stdin; repaired focused/race and committed native checks pass",
+        "raw": "http-attach-source-checks-v2.json",
+        "raw_sha256": "276303d112634df697a822c96303d4988731402fa6bc9673f2996e27a2688dd1"
+      },
+      {
+        "criterion": "Terminal stdin EOF must not close the bidirectional console",
+        "commit": "f07fd5ea737887e38c6607af567bc1a2d07ffe16",
+        "implementation": "Retain terminal shim keepalive until task exit/deletion; nonterminal CloseIO still follows the reader's final bytes",
+        "status": "PASS",
+        "control": "Old 594d source fails stock/runsc TestNerdTerminalPeaInputCompletionKeepsConsole: terminal stdin completion closed the bidirectional console; repaired focused/race checks pass",
+        "raw": "terminal-keepalive-checks-v3.json",
+        "raw_sha256": "b32ff3f8716f2bf582fc5bdfb84f8c97a14a042d29ff978da28bef3c0aed8872"
+      }
+    ],
+    "committed_native_checks": {
+      "status": "PASS",
+      "raw": "terminal-committed-checks-v1.json",
+      "raw_sha256": "8339e7ae7389173db38d9db2573a122ea43b5f3b0a7558a22311958a840ae9cd",
+      "checks": "Privileged native rundmc, peas, runcontainerd/..., users, guardiancmd and netplugin; focused race; go vet ./...; go build ./...; native gdn build",
+      "boundary": "Clean f07fd5ea7 component, native amd64; not the parent's Linux acceptance gate or installed packaging"
+    },
+    "prepared_image_campaign": {
+      "status": "PASS",
+      "actual": "30/30: fresh-client TTY, parentless cleanup, IO, restart and orphan; stock/runsc three repetitions each per matrix",
+      "raw": "latest-followup-campaign-v7.json",
+      "raw_bytes": 32040,
+      "raw_sha256": "5638ee8dd3007099e196816881df64f0014fb2bd3dc3c96262c8d9ef38eb3042",
+      "bounds": "20s operations, 5s readiness, 210s unit, 240s outer; 8GiB/200%CPU/1024tasks; serial, stop first unexpected result",
+      "independent_cleanup": "All thirty per-run snapshots have empty tasks/containers/runtime processes before daemon teardown and empty processes/mounts/sockets/workload cgroups/GrootFS images/loops before namespace teardown",
+      "local_verification": "All thirty candidate/probe identities, campaign raw hashes, inner raw hashes and independent inventories rechecked against the retrieved archive"
+    },
+    "retention": {
+      "remote_directory": "/home/ubuntu/build/pea-evaluation-20261028",
+      "local_directory": "/private/var/folders/b6/kz7pzjk56db8p_94cbf2dbh40000gn/T/opencode/image-backed-peas-20261028/terminal-evidence-v1",
+      "archive": "terminal-evidence-v1.tgz",
+      "archive_bytes": 3387764,
+      "archive_sha256": "132b4778acb1de7587dcfa67eac131819b9c81220886ac62eada6b2c7a20cb5e",
+      "verification": "1524 safe regular-file members extracted; every one of the 1523 indexed entries independently size/hash verified"
+    },
+    "deadline_and_recovery_controls": {
+      "status": "PASS for the controls; intentional runtime FAIL remains FAIL",
+      "bounds": "Cold image 90s; normal operations 20s; readiness 5s; producer 180s; recovery cleanup 45s; unit 270s; outer 300s; 8GiB/200%CPU/1024tasks, serial stop-first-unexpected-result",
+      "abort_control": "Old return-on-timeout mutant fails timeout did not abort before cleanup; repaired os.Exit(124) and race checks pass",
+      "descendant_control": "Old PGID-only supervisor fails separate-PGID producer survived timeout; v2 uses PID/start identity and PIDfds, stops detached descendants and passes",
+      "forced_recovery": "supervisor-recovery-control-v3.json: exit124, status FAIL preserved, producer/descendants gone, independent tasks/containers/process/mount/socket/cgroup/image/loop inventories empty; recovery is not acceptance",
+      "raw_directory": "supervisor-evidence/ in the private local retention directory; original raw files remain on the builder"
+    },
+    "shipped_failure_retention": {
+      "archive": "shipped-failures-evidence-v1.tgz",
+      "archive_bytes": 188354,
+      "archive_sha256": "9002fc38b28fa2dbf49f573a15acc138b0ff7ef50f0c64e99589da7b6693e376",
+      "verification": "157 safe regular-file members extracted; all 156 indexed sizes/hashes independently verified locally, including inner stdout/stderr for v10-v15, probe builds v27-v31, HTTP client controls and exact-binary healthcheck controls",
+      "cache_retention": "All five v10-v14 detached backing stores preserved losslessly in gzip; decompressed SHA256 verified before original unlink, archive sizes/hashes rechecked under privileged read access. Reclaimed 4698918912 bytes; no runtime/raw failure evidence deleted",
+      "cache_receipt": "shipped-detached-store-compression-v1.json",
+      "cache_receipt_sha256": "f902c5badedf61b5bd033e8eef8d1170de5239c7302f14d7c7f0f1f645d18490",
+      "v15_retention": "Detached v15 failed-fixture store retained losslessly, decompressed SHA256 verified before original unlink; reclaimed946229248 bytes",
+      "v15_receipt": "shipped-detached-store-compression-v2.json",
+      "v15_receipt_sha256": "809be2ee086c9326c24c78da6a67f4d9b963a95dd95c53d654568a20578b49c5"
+    },
+    "shipped_execution": {
+      "status": "PASS for six native shipped-asset repetitions, not installed/live Rep acceptance",
+      "candidate": "f07fd5ea7/a407a327 inline tree; shipped-v16 probe31; installed Envoy1.37.2/healthcheck/cflinuxfs4 asset bytes",
+      "actual": "Stock3/3 and runsc3/3 pass Envoy version/configuration, actual parent-rootfs loader-negative control, proxy HTTP200, HTTP Attach/Signal/output fanout and shared Wait0, TCP/HTTP startup success and TCP4/HTTP5 closed-port negatives. Independent runtime/process/mount/socket/cgroup/image/loop inventories empty, no recovery. Each run20.95-21.90s",
+      "campaign": "shipped-lifecycle-v16.json",
+      "campaign_bytes": 11512,
+      "campaign_sha256": "9f478b4b619ada5608566e1669485c76f9bca850b13724351a2812dd8de93c6a",
+      "build_receipt_sha256": "2f2c2d586c9bf7b32803a81df0b0bd65ad7227ebe900701b3161e593fa52aa10",
+      "probe_sha256": "b09fcad55895d48115364a3c46b19ea407e0b766df85c5b4714e68957162dee9",
+      "retained_failures": "v7 cold-image timeout; v10 omitted canonical /dev/shm; v11 empty proxy response; v12 proves BusyBox client exit139 (also native host signal11); v13 receives Envoy HTTP426 for HTTP1.0; v14 reaches successful proxy/Signal/shared Wait but fails the log-text oracle; v15 repairs that oracle and demonstrates missing non-loopback healthcheck fixture",
+      "cleanup": "v10-v15 each retain runtime FAIL with empty independent runtime/image/loop/mount/socket/cgroup inventories; recovery observations remain separate",
+      "fixture": "Private eth0 192.0.2.2/32, parent server0.0.0.0:8080; exact-binary host controls discriminate loopback-only exit3, TCP/HTTP success0 and closed-port TCP4/HTTP5",
+      "bounds": "Cold image90s, other operations20s, readiness5s, producer180s, cleanup45s, unit270s/outer300s;8GiB/200%CPU/1024tasks, serial3xstock/runsc, stop first unexpected result",
+      "next_check": "Matched release assembly and installed candidate behavior with actual Rep/Executor requests; resource failures below block acceptance",
+      "boundary": "Real Garden HTTP with reconstructed requests, not captured live Rep behavior or an installed candidate release"
+    },
+    "resource_execution": {
+      "status": "FAIL: independent child memory enforcement; aggregate CF accounting also fails",
+      "campaign": "resource-lifecycle-v1.json",
+      "campaign_bytes": 4672,
+      "campaign_sha256": "0846c22dd6979eb3f41abc05c5560eea905908bcd2b925ad243362b5bdc21771",
+      "build_receipt_sha256": "c8b7375221b8843600a4c9a1e38cd43c8d42fad0cadbff84b55eff91637a9fce",
+      "probe_sha256": "873c347e644f18b42b7793cd104e4d8fc128c8566d2d54c866252278356d1128",
+      "actual": "Stock3/3 pass high256MiB and low64MiB limits for a128MiB touched resident allocation. First runsc repetition succeeds under both limits; remaining runsc repetitions stop. Failure: independent child memory limit NOT ENFORCED:128MiB resident allocation under64MiB limit. Probe explicitly kills the child, obtains Wait137, verifies parent still running and independent cleanup; these do not convert FAIL to PASS",
+      "failure_raw": "nerd-runsc-resource-v1-1.log",
+      "failure_raw_sha256": "55687be36754b4669dc03eaab036f7cec971f86006030309f3a49d9be0c45110",
+      "failure_snapshot_sha256": "d1328dc606b7d662e5a9ac96f7c8b33dc6f06143d6cae20eff35d95512746fdb",
+      "accounting": "Actual type io.containerd.cgroups.v1.Metrics, not v2. Parent TotalUsageTowardLimit2236416 before child,0 while child holds128MiB,2236416 after deletion; child137306112. Parent CPU usage also0 while child runs. Child host cgroup process-less, memory.max=max, memory.current=0",
+      "source_explanation": "gVisor container.go setupCgroupForSubcontainer explicitly creates process-less compatibility cgroups; Update changes host limits only for the root. boot/events.go fallback treats multi-container root as an idle pause container. cgroup2fs memory.max and cpu.max remember values without enforcing them. Host compat limits or fake/polling metrics cannot repair these semantics",
+      "bounds": "Requested OCI child limits verified in real CreatePea path.20s steps/5s readiness, producer120s/cleanup30s (resource wrapper, not shipped180s/45s), unit270s/outer300s;8GiB/200%CPU/1024tasks, serial stop-first-unexpected-result. Actual2.27-2.97s",
+      "remaining": "CPU-limit discriminator NOT RUN; correct application-plus-peas accounting and independent enforcement require owning-source implementation, not acceptance-predicate weakening"
+    },
+    "shipped_resource_verification": {
+      "status": "PASS for evidence integrity only",
+      "local_directory": "/private/var/folders/b6/kz7pzjk56db8p_94cbf2dbh40000gn/T/opencode/image-backed-peas-20261028/shipped-resource-evidence-v1",
+      "verification_receipt": "shipped-resource-verified-v1.json",
+      "verification_sha256": "f46b6794205e3cf178c6367e1d2a1c076cb0ae7b7f11e13f7f7361f5389d6217",
+      "actual": "244 files size/hash checked against fresh privileged remote inventory. All10 outer raw hashes, snapshots, exact source/probe/runtime identities, every shipped criterion and resource metric/failure independently checked; all teardown inventories empty and recovery null",
+      "runs": [
+        {"name": "nerd-runc-shipped-v16-1", "status": "PASS", "exit_code": 0, "raw_sha256": "ea09b321d144929b30e9eae4c7bb26aa449f88111f7200454e990aa9f7461b24", "snapshot_sha256": "303c9ec98deaf69e622786b258e7071e0365b8ffea8a9f7c506d2c7e198b3442"},
+        {"name": "nerd-runc-shipped-v16-2", "status": "PASS", "exit_code": 0, "raw_sha256": "a1e0f6f33ba7216c3ac4ea8e7784e6f637c48e222131652b33b342010cf31404", "snapshot_sha256": "64b7cf9ce9b682ac5a8652d6e76b8eb479a4f9d869426cfcf53c05eda953b348"},
+        {"name": "nerd-runc-shipped-v16-3", "status": "PASS", "exit_code": 0, "raw_sha256": "204601c40cf8e67a588514d232884ca433922290934f5fdd8f49da16898a3d0b", "snapshot_sha256": "5f69e18d04e64375786cc3e32cfff125ec762c4430f86c3fcd259bc09a24b2e4"},
+        {"name": "nerd-runsc-shipped-v16-1", "status": "PASS", "exit_code": 0, "raw_sha256": "95cdf052330aedae94a891a3870081df99bc08f9e50f24d106a5024f6cdd85c2", "snapshot_sha256": "83c0db8d9a3d301691dc3f1138f6f1d1628bab51b9ad1ce399808bda2568552c"},
+        {"name": "nerd-runsc-shipped-v16-2", "status": "PASS", "exit_code": 0, "raw_sha256": "b082a0246e78413c48c08dd0a44d4a18a48cd15c889829df84db4e3219f31fae", "snapshot_sha256": "26af0062f4fea05976108bf4c8380466ee2c52e2c3d67dc1068a51c4d60aa7b5"},
+        {"name": "nerd-runsc-shipped-v16-3", "status": "PASS", "exit_code": 0, "raw_sha256": "c3f01cc8ad802aee24a6e5b12506d8dc80395f4b51be820d9532e0d9dd29cd13", "snapshot_sha256": "192f58e9575b2894cf476b39d1f9d7951389ab0c1e085534cbf64c066fbb4f83"},
+        {"name": "nerd-runc-resource-v1-1", "status": "PASS", "exit_code": 0, "raw_sha256": "fab0edec3d721ca59680dbabf43eec1d5ccc3d3f44822ef1a5a2686ba2fe29b2", "snapshot_sha256": "ea202c52ab3ef20bddbebc38cc4c7ef6a6836eb7c9a0b61c9d8003fa93b2e029"},
+        {"name": "nerd-runc-resource-v1-2", "status": "PASS", "exit_code": 0, "raw_sha256": "e22518365f790b263aa86fb9893b9a9ea5b63e07991314844aca45c18e89d08d", "snapshot_sha256": "bbd3f0cb9d5d7a93454c77fde40781fc267cbd2b7e7b60e8dab9382469160829"},
+        {"name": "nerd-runc-resource-v1-3", "status": "PASS", "exit_code": 0, "raw_sha256": "12b8ca35364dfe3fd634742f40fd92e8dab67e682cc080a6f2158778a38b7e4c", "snapshot_sha256": "429542280c8990eb818d284b4dbc59e98d2f49a0cd5e0bdde781d3b2a6ca5e64"},
+        {"name": "nerd-runsc-resource-v1-1", "status": "FAIL", "exit_code": 1, "raw_sha256": "55687be36754b4669dc03eaab036f7cec971f86006030309f3a49d9be0c45110", "snapshot_sha256": "d1328dc606b7d662e5a9ac96f7c8b33dc6f06143d6cae20eff35d95512746fdb"}
+      ]
+    }
+  },
   "attach_followup": {
     "scope": "Native source regression checks on the new candidate; prior runtime campaigns below remain at their recorded 7658f123a identity",
     "garden_source": "3c7e27954e3dce143cfc8356ed464e44c8e785b7",
@@ -42,7 +179,7 @@
     "review_dispositions": {
       "CFAR1540-S3": {
         "claim": "Fresh-client Attach always uses non-terminal IO because AttachTask omits cio.WithTerminal",
-        "disposition": "NOT SUBSTANTIATED as a source defect; native runtime fresh-client TTY execution remains NOT RUN",
+        "disposition": "NOT SUBSTANTIATED as a source defect; historical 3c7e execution gap is closed by latest_followup's exact f07 fresh-client TTY campaign",
         "source_proof": ["vendor/github.com/containerd/containerd/v2/client/container.go: loadTask -> attachExistingIO -> loadFifos copies response.Process.Terminal", "vendor/github.com/containerd/containerd/v2/pkg/cio/io_unix.go: openFifos/copyIO suppress stderr when fifos.Terminal is true", "gVisor pkg/shim/v1/runsc/service.go State returns sio.Terminal"],
         "discriminator": "TestNerdPeaFreshAttachUsesRuntimeTerminal passes under race for both terminal and nonterminal. OCI Process.Terminal deliberately disagrees with the runtime response. Terminal stderr names a missing directory and must never be opened; nonterminal stdout/stderr bytes must both be delivered. No production terminal-attach change was made."
       },
@@ -72,7 +209,7 @@
     "shipped_assets": {
       "source_instance": "cf_cells_1/diego-cell/178aba96-7728-4b96-a6a3-725748160b8a",
       "source_director": "ba9f258f-b616-46cb-a7af-44b2ec6413fb",
-      "verification": "Installed cell, guarded OCI copy and local copy match each asset's bytes and SHA256. Builder transfer completed through resumed rsync but final builder size/hash verification is BLOCKED by SSH ingress; completion of transfer is not byte-identity proof.",
+      "verification": "Installed cell, guarded OCI, local and builder copies independently match each asset's bytes and SHA256; the historical ingress/transfer blocker is resolved.",
       "files": [
         {"installed_path": "/var/vcap/packages/proxy/envoy", "bytes": 90411184, "sha256": "32d3cc203b8abdce8c2ed916a298124364e0c48e83b7196f551e769b6a489bf8"},
         {"installed_path": "/var/vcap/packages/healthcheck/healthcheck", "bytes": 8602202, "sha256": "bceeb4880b4ef244486dfd4448d77c22ed14aa2d67833efc10b31550564e7480"},
@@ -81,11 +218,12 @@
       "healthcheck_help": "The verified shipped healthcheck -h was executed natively to inspect flags. This is not execution as a Garden pea."
     },
     "execution_blocker": {
+      "status": "RESOLVED: owner-approved persistent TCP22 193.0.0.0/8 ingress; sg-063a7a6e8c1bf8b16 rule sgr-005a235e7122d45ea verified, SSH works and builder asset hashes match. Historical attempt below is retained, not current availability.",
       "criterion": "New-candidate runtime regressions, shipped Envoy/healthcheck image execution and actual Garden HTTP boundary",
       "attempt": "Inventory-revalidated direct SSH and rsync to ubuntu@18.206.178.165 using the existing verified key and host-key policy",
       "actual": "SSH port22 timed out before authentication. EC2 running; instance/system/EBS reachability passed. Current egress193.57.20.71 is outside both attached security groups' SSH CIDRs; SSM inventory is empty.",
-      "missing_input": "Restore a currently approved network path, or obtain owner approval for a narrowly scoped SSH ingress change. No security-group/IAM modification or agent installation was attempted.",
-      "retained_required_gates": ["Shipped/runtime checks NOT RUN", "Limits/accounting NOT RUN", "Packaging/install NOT RUN", "Parent/adoption BLOCKED"]
+      "missing_input": "None for builder access; current acceptance gaps are recorded in latest_followup and retained_gates.",
+      "retained_required_gates": ["Native shipped6/6 PASS; live-CF OPEN", "Independent memory enforcement and aggregate accounting FAIL; CPU NOT RUN", "Packaging/install NOT RUN", "Parent/adoption BLOCKED"]
     }
   },
   "environment": {
@@ -1710,11 +1848,11 @@
     }
   ],
   "retained_gates": {
-    "shipped_cf": "NOT RUN: shipped Envoy/healthcheck, actual CF Garden client/server and parent-rootfs negative control",
-    "resources": "NOT RUN: independent child limits and aggregate CF accounting",
+    "shipped_cf": "Native shipped6/6 PASS including healthcheck and actual parent-rootfs loader-negative control; live Rep and installed candidate remain OPEN",
+    "resources": "FAIL: runsc child holds128MiB under verified64MiB OCI limit; parent memory/CPU metrics drop to0 while child runs. Stock3/3 discriminator PASS, runsc remaining2 repetitions stopped; CPU enforcement NOT RUN",
     "packaging": "NOT RUN: candidate source-release assembly, installed identity and rollout/rollback",
     "parent": "BLOCKED: deliberately unadopted component gitlinks; no pin staging to obtain PASS",
-    "review": "Pending current-head source review; previous NOT COMPLETE verdict remains applicable to retained acceptance gates"
+    "review": "Owner requested no bot-review dialogue October28. Self-review disclosed; executable resource FAIL and unexecuted installed/packaging/live/adoption gates keep this draft, independent of bot verdicts"
   },
   "grootfs_source_reuse": {
     "tree": "ffb06fd23fb84019a420635278a92b62e7881375",
