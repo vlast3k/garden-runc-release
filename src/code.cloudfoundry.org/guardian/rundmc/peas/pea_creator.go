@@ -72,6 +72,9 @@ type PeaCreator struct {
 	// Non-nil only for image-backed subcontainers. Stock still uses its
 	// existing temporary-pea username resolver before entering CreatePea.
 	RootfsUserLookupper users.UserLookupper
+	// GroupedRunsc uses virtual parent namespaces, not the Sentry's host PID
+	// and nobody-only user namespace. Stock peas retain their setns behavior.
+	GroupedRunsc bool
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle string) (_ garden.Process, theErr error) {
@@ -173,6 +176,18 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	if genErr != nil {
 		return errs("generating-bundle", genErr)
 	}
+	if p.GroupedRunsc {
+		// An absent OCI PID namespace joins runsc's root virtual PID namespace.
+		// Empty Path instead requests a new virtual child namespace. Remove the
+		// base template's PID entry too, rather than only omitting an override.
+		namespaces := make([]specs.LinuxNamespace, 0, len(bndl.Namespaces()))
+		for _, ns := range bndl.Namespaces() {
+			if ns.Type != specs.PIDNamespace {
+				namespaces = append(namespaces, ns)
+			}
+		}
+		bndl = bndl.WithNamespaces(namespaces...)
+	}
 
 	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, processSpec, resolvedUser)
 	bndl = bndl.WithProcess(*preparedProcess)
@@ -200,6 +215,16 @@ func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, pri
 	linuxNamespaces := map[string]string{}
 	linuxNamespaces["mount"] = ""
 	linuxNamespaces["network"] = fmt.Sprintf("/proc/%d/ns/net", originalCtrInitPid)
+	if p.GroupedRunsc {
+		linuxNamespaces["ipc"] = ""
+		linuxNamespaces["uts"] = ""
+		if !privileged {
+			// The gofer needs the template's image UID/GID mappings in a new
+			// namespace, not the shared Sentry's one-ID host namespace.
+			linuxNamespaces["user"] = ""
+		}
+		return linuxNamespaces, nil
+	}
 	linuxNamespaces["ipc"] = fmt.Sprintf("/proc/%d/ns/ipc", originalCtrInitPid)
 	linuxNamespaces["pid"] = fmt.Sprintf("/proc/%d/ns/pid", originalCtrInitPid)
 	linuxNamespaces["uts"] = fmt.Sprintf("/proc/%d/ns/uts", originalCtrInitPid)

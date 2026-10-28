@@ -120,6 +120,33 @@ var _ = Describe("PeaCreator", func() {
 	})
 
 	Describe("image-rootfs users and failed-stage cleanup", func() {
+		It("uses image-mapped gofer namespaces and the virtual parent PID namespace for grouped runsc", func() {
+			peaCreator.GroupedRunsc = true
+			mapping := []specs.LinuxIDMapping{{ContainerID: 0, HostID: 100000, Size: 65536}}
+			bundleGenerator.GenerateReturns(goci.Bundle().WithNamespaces(goci.PIDNamespace, goci.UserNamespace, goci.MountNamespace).
+				WithUIDMappings(mapping...).WithGIDMappings(mapping...), nil)
+			_, err := peaCreator.CreatePea(log, processSpec, pio, ctrHandle)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bundleGenerator.GenerateArgsForCall(0).Namespaces).To(Equal(map[string]string{
+				"mount": "", "network": "/proc/123/ns/net", "ipc": "", "uts": "", "user": "",
+			}))
+			_, _, bundle, _, _, _, _, _ := execRunner.RunPeaArgsForCall(0)
+			Expect(bundle.Namespaces()).To(Equal([]specs.LinuxNamespace{goci.UserNamespace, goci.MountNamespace}))
+			Expect(bundle.UIDMappings()).To(Equal(mapping))
+			Expect(bundle.GIDMappings()).To(Equal(mapping))
+		})
+
+		It("does not request a user namespace for a privileged grouped runsc pea", func() {
+			peaCreator.GroupedRunsc = true
+			privilegedGetter.PrivilegedReturns(true, nil)
+			bundleGenerator.GenerateReturns(goci.Bundle(), nil)
+			_, err := peaCreator.CreatePea(log, processSpec, pio, ctrHandle)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bundleGenerator.GenerateArgsForCall(0).Namespaces).To(Equal(map[string]string{
+				"mount": "", "network": "/proc/123/ns/net", "ipc": "", "uts": "",
+			}))
+		})
+
 		It("resolves the child user after preparing its own image", func() {
 			lookup := new(usersfakes.FakeUserLookupper)
 			lookup.LookupReturns(&users.ExecUser{Uid: 1234, Gid: 4321, Home: "/child-home", Sgids: []int{5678}}, nil)

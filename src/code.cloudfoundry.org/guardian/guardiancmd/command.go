@@ -710,6 +710,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	}
 	if runtimePolicy.IsAlternative() {
 		peaCreator.RootfsUserLookupper = users.LookupFunc(users.LookupImageUser)
+		peaCreator.GroupedRunsc = true
 	}
 
 	peaUsernameResolver := &peas.PeaUsernameResolver{
