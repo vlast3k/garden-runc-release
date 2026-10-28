@@ -290,13 +290,17 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 		wantContainerType string
 		wantSandboxID     string
 		wantTTY           bool
+		wantStatsScope    string
 	}{
 		{wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true},
 		{runtimeType: "io.containerd.runc.v2", wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", wantContainerType: "sandbox"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "garden-init"}, wantContainerType: "sandbox", wantStatsScope: "sandbox"},
+		{runtimeType: "io.containerd.runc.v2", wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true, annotations: map[string]string{"container-type": "garden-init"}},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"sentinel": "retained"}, wantContainerType: "sandbox"},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"io.kubernetes.cri.container-type": "container"}, wantContainerType: "container"},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent", "sentinel": "retained"}, wantContainerType: "container", wantSandboxID: "garden-parent"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent", "dev.gvisor.stats.scope": "sandbox"}, wantContainerType: "container", wantSandboxID: "garden-parent"},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent"}, wantContainerType: "container", wantSandboxID: "garden-parent", wantTTY: true},
 		{runtimeType: "io.containerd.runc.v2", wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true, annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent"}, wantTTY: true},
 	} {
@@ -392,6 +396,9 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 				}
 				if emitted.Annotations["io.kubernetes.cri.sandbox-id"] != test.wantSandboxID {
 					t.Errorf("sandbox ID = %q, want %q", emitted.Annotations["io.kubernetes.cri.sandbox-id"], test.wantSandboxID)
+				}
+				if emitted.Annotations["dev.gvisor.stats.scope"] != test.wantStatsScope {
+					t.Errorf("stats scope = %q, want %q", emitted.Annotations["dev.gvisor.stats.scope"], test.wantStatsScope)
 				}
 				if emitted.Annotations["sentinel"] != wantSentinel {
 					t.Error("unrelated annotation lost")

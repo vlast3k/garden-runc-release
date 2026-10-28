@@ -68,6 +68,9 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 			spec.Annotations = make(map[string]string)
 		}
 		if spec.Annotations["container-type"] == "pea" {
+			// Only the application parent owns aggregate statistics. A pea must
+			// not inherit its parent's sandbox-wide reporting scope.
+			delete(spec.Annotations, "dev.gvisor.stats.scope")
 			parent := spec.Annotations["sandbox-container"]
 			if parent == "" || parent == containerID {
 				return fmt.Errorf("pea %s requires a distinct sandbox-container", containerID)
@@ -78,6 +81,11 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 			spec.Annotations["io.kubernetes.cri.sandbox-id"] = parent
 		} else if _, exists := spec.Annotations["io.kubernetes.cri.container-type"]; !exists {
 			spec.Annotations["io.kubernetes.cri.container-type"] = "sandbox"
+		}
+		if spec.Annotations["container-type"] == "garden-init" {
+			// CF reports the application and its owned peas together. The runsc
+			// root is an application, not an idle Kubernetes pause container.
+			spec.Annotations["dev.gvisor.stats.scope"] = "sandbox"
 		}
 	}
 	containerOpts := []client.NewContainerOpts{client.WithSpec(spec)}
