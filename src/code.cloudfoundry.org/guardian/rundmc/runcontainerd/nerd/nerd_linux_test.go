@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -114,6 +115,7 @@ func (rpc *policyTasksServer) Kill(_ context.Context, request *tasksapi.KillRequ
 type peaInputTasksServer struct {
 	policyTasksServer
 	closed chan *tasksapi.CloseIORequest
+	killed atomic.Bool
 }
 
 func (rpc *peaInputTasksServer) Create(_ context.Context, request *tasksapi.CreateTaskRequest) (*tasksapi.CreateTaskResponse, error) {
@@ -134,7 +136,38 @@ func (rpc *peaInputTasksServer) Delete(context.Context, *tasksapi.DeleteTaskRequ
 	return &tasksapi.DeleteResponse{}, nil
 }
 
+func (rpc *peaInputTasksServer) Wait(context.Context, *tasksapi.WaitRequest) (*tasksapi.WaitResponse, error) {
+	return &tasksapi.WaitResponse{}, nil
+}
+
+func (rpc *peaInputTasksServer) Kill(context.Context, *tasksapi.KillRequest) (*emptypb.Empty, error) {
+	// Stock cleanup signals only this fake RPC, never the synthetic host PID.
+	rpc.killed.Store(true)
+	return &emptypb.Empty{}, nil
+}
+
+func (rpc *peaInputTasksServer) Get(ctx context.Context, request *tasksapi.GetRequest) (*tasksapi.GetResponse, error) {
+	response, err := rpc.policyTasksServer.Get(ctx, request)
+	if rpc.killed.Load() {
+		response.Process.Status = tasktypes.Status_STOPPED
+	}
+	return response, err
+}
+
 func TestNerdPeaCloseIOFollowsInputCompletion(t *testing.T) {
+	testNerdPeaInputCompletion(t, false, runcontainerd.RunscRuntime)
+}
+
+func TestNerdTerminalPeaInputCompletionKeepsConsole(t *testing.T) {
+	for _, policy := range []runcontainerd.RuntimePolicy{runcontainerd.StockRuntime, runcontainerd.RunscRuntime} {
+		t.Run(policy.String(), func(t *testing.T) {
+			testNerdPeaInputCompletion(t, true, policy)
+		})
+	}
+}
+
+func testNerdPeaInputCompletion(t *testing.T, terminal bool, policy runcontainerd.RuntimePolicy) {
+	t.Helper()
 	dir := t.TempDir()
 	listener, err := net.Listen("unix", filepath.Join(dir, "containerd.sock"))
 	if err != nil {
@@ -155,11 +188,11 @@ func TestNerdPeaCloseIOFollowsInputCompletion(t *testing.T) {
 	defer cancel()
 	ctx = leases.WithLease(ctx, "fixture-no-lease")
 	log := lagertest.NewTestLogger("pea-input")
-	n := nerd.New(c, ctx, dir, metrics.NewMetricsProvider(log, dir), runcontainerd.RunscRuntime)
+	n := nerd.New(c, ctx, dir, metrics.NewMetricsProvider(log, dir), policy)
 	input, writer := io.Pipe()
 	defer input.Close()
 	defer writer.Close()
-	spec := &specs.Spec{Process: &specs.Process{Args: []string{"/unused"}}, Annotations: map[string]string{"container-type": "pea", "sandbox-container": "parent"}}
+	spec := &specs.Spec{Process: &specs.Process{Args: []string{"/unused"}, Terminal: terminal}, Annotations: map[string]string{"container-type": "pea", "sandbox-container": "parent"}}
 	if err := n.Create(log, "child", spec, 0, 0, func() (io.Reader, io.Writer, io.Writer) { return input, nil, nil }); err != nil {
 		t.Fatal(err)
 	}
@@ -191,6 +224,18 @@ func TestNerdPeaCloseIOFollowsInputCompletion(t *testing.T) {
 	}
 	if err := writer.Close(); err != nil {
 		t.Fatal(err)
+	}
+	if terminal {
+		b := make([]byte, 10)
+		if _, err := io.ReadFull(fifo, b); err != nil || string(b) != "last bytes" {
+			t.Fatalf("final terminal FIFO bytes = %q, %v", b, err)
+		}
+		select {
+		case <-rpc.closed:
+			t.Fatal("terminal stdin completion closed the bidirectional console")
+		case <-time.After(50 * time.Millisecond):
+		}
+		return
 	}
 	select {
 	case closed := <-rpc.closed:

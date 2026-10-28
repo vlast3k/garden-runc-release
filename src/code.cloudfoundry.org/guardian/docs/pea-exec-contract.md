@@ -20,6 +20,12 @@ backpressure. Metadata remains until
 image deletion succeeds, allowing cleanup of a missing-task orphan without
 inventing an exit code. Runtime-deletion failure retains image and metadata.
 
+Pea Create IO follows the OCI terminal flag. Nonterminal startup input completion
+releases the shim stdin keepalive only after the last FIFO write. Terminal input
+completion must retain it until exit/deletion: the stock shim's console master
+is bidirectional, and closing it also loses output and delivers SIGHUP. Output-only
+Attach therefore does not terminate a terminal when its HTTP input pipe closes.
+
 Native prepared-image, real GrootFS and fresh-client restart matrices exercise
 this path with stock controls. They do not establish shipped Envoy/healthcheck,
 live CF, independent child resource enforcement, CF accounting or packaged

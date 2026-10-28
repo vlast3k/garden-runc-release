@@ -44,6 +44,7 @@ type Nerd struct {
 type peaTask struct {
 	task      client.Task
 	stdinDone <-chan struct{}
+	terminal  bool
 	context   context.Context
 	cancel    context.CancelFunc
 }
@@ -128,7 +129,7 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 	if err == nil && isPea {
 		ctx, cancel := context.WithCancel(n.context)
 		n.peaIOMu.Lock()
-		n.peaTasks[containerID] = &peaTask{task: task, stdinDone: inputDone, context: ctx, cancel: cancel}
+		n.peaTasks[containerID] = &peaTask{task: task, stdinDone: inputDone, terminal: spec.Process != nil && spec.Process.Terminal, context: ctx, cancel: cancel}
 		n.peaIOMu.Unlock()
 	}
 	return err
@@ -155,6 +156,13 @@ func (n *Nerd) Start(log lager.Logger, containerID string) error {
 	}
 
 	if pea != nil {
+		// A terminal has one bidirectional console master, not an independent
+		// stdin pipe. Closing its keepalive on input EOF makes the stock shim
+		// close that master, dropping output and delivering SIGHUP. Keep it
+		// until task exit/deletion; stdin completion is not terminal shutdown.
+		if pea.terminal {
+			return nil
+		}
 		// The shim holds a keepalive writer on stdin. Release it only after
 		// cio has written the supplied input, never immediately after Start.
 		go func() {
