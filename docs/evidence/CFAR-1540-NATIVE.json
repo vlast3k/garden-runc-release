@@ -4,6 +4,14 @@
   "garden_source": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
   "guardian_tree": "128ea6c11c1ed34bbf6b607c8ebdaf9bc5d70177",
   "gvisor_source": "3bd79c352df8cdbb01e807b7fb463244658fa990",
+  "accounting_followup": {
+    "receipt": "CFAR-1540-ACCOUNTING.json",
+    "garden_source": "3d4c332608e938f668af4ab2e0ed10e13004b79d",
+    "guardian_tree": "1aaa37a3a91d518369fd6ed89d3d667f427995d7",
+    "gvisor_source": "8cb84ebe89d63727191ef5773850679763c443fa",
+    "actual": "Accounting source/native checks, matched four-artifact build and real Garden HTTP stock/runsc3x reporting PASS with intended old-artifact negative; all raw hashes and independent cleanup verified",
+    "boundary": "Reporting only; historical latest_followup remains at f07/3bd. Independent64MiB child memory enforcement FAIL, CPU enforcement/packaging/install/actual Rep/adoption remain open"
+  },
   "latest_followup": {
     "garden_source": "f07fd5ea737887e38c6607af567bc1a2d07ffe16",
     "guardian_tree": "a407a3277d209d406954444c07199fcfb8527b95",
