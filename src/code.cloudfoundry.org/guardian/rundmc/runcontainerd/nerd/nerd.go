@@ -47,7 +47,7 @@ func New(client *client.Client, context context.Context, ioFifoDir string, mp *m
 	}
 }
 
-func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, hostUID, hostGID uint32, pio func() (io.Reader, io.Writer, io.Writer)) error {
+func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, hostUID, hostGID uint32, pio func() (io.Reader, io.Writer, io.Writer)) (result error) {
 	log.Debug("creating-container", lager.Data{"containerID": containerID})
 	if n.policy == runcontainerd.RunscRuntime {
 		spec.Windows = nil // runsc rejects the Windows section
@@ -75,6 +75,18 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 	if err != nil {
 		return err
 	}
+	// Only a successful NewContainer establishes ownership. Failed label/task
+	// setup must not leave owned metadata behind, or erase a colliding ID.
+	defer func() {
+		if result == nil {
+			return
+		}
+		if err := n.Delete(log, containerID); err != nil {
+			result = &runcontainerd.PeaRuntimeCleanupError{Err: errors.Join(result, err)}
+			return
+		}
+		result = errors.Join(result, n.RemoveBundle(log, containerID))
+	}()
 
 	for key, value := range spec.Annotations {
 		log.Debug("setting-label", lager.Data{"containerID": containerID, "label-key": key, "label-value": value})

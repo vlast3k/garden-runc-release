@@ -22,6 +22,14 @@ type Volumizer interface {
 	Destroy(log lager.Logger, handle string) error
 }
 
+// PeaRuntimeCleanupError keeps a failed child's image available for a later
+// cleanup retry when runtime deletion has not been proved.
+type PeaRuntimeCleanupError struct{ Err error }
+
+func (e *PeaRuntimeCleanupError) Error() string        { return e.Err.Error() }
+func (e *PeaRuntimeCleanupError) Unwrap() error        { return e.Err }
+func (e *PeaRuntimeCleanupError) PeaRootfsInUse() bool { return true }
+
 type RunContainerPea struct {
 	peaManager               PeaManager
 	processManager           ProcessManager
@@ -59,7 +67,7 @@ func (r *RunContainerPea) RunPea(
 	defer func() {
 		if result != nil {
 			if err := r.peaManager.Delete(log, processID); err != nil {
-				result = errors.Join(result, err)
+				result = &PeaRuntimeCleanupError{Err: errors.Join(result, err)}
 				return // retain metadata/rootfs while runtime cleanup is unproved
 			}
 			result = errors.Join(result, r.peaManager.RemoveBundle(log, processID))

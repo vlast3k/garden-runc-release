@@ -1,6 +1,7 @@
 package runcontainerd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -144,7 +145,12 @@ func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pi
 	}
 
 	if r.useContainerdForProcesses {
-		return r.cgroupManager.SetUseMemoryHierarchy(id)
+		if err := r.cgroupManager.SetUseMemoryHierarchy(id); err != nil {
+			if deleteErr := r.containerManager.Delete(log, id); deleteErr != nil {
+				return &PeaRuntimeCleanupError{Err: errors.Join(err, deleteErr)}
+			}
+			return errors.Join(err, r.containerManager.RemoveBundle(log, id))
+		}
 	}
 
 	return nil
@@ -152,6 +158,21 @@ func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pi
 
 func (r *RunContainerd) Start(log lager.Logger, id string) error {
 	return r.containerManager.Start(log, id)
+}
+
+// WaitPea follows the child task, never the lifetime of the shared Sentry PID.
+func (r *RunContainerd) WaitPea(log lager.Logger, id string) error {
+	process, err := r.processManager.GetTask(log, id)
+	if err != nil {
+		var noTask TaskNotFoundError
+		var noContainer ContainerNotFoundError
+		if errors.As(err, &noTask) || errors.As(err, &noContainer) {
+			return nil
+		}
+		return err
+	}
+	_, err = process.Wait()
+	return err
 }
 
 func updateAnnotationsIfNeeded(bundle *goci.Bndl) {

@@ -88,14 +88,14 @@ func TestContainerizerWithoutContainerdUsesStockStrategies(t *testing.T) {
 
 func TestContainerizerWithContainerdUsesValidatedStrategies(t *testing.T) {
 	for _, test := range []struct {
-		runtimeType string
-		streamer    string
-		execPeas    bool
-		wantError   bool
+		runtimeType     string
+		streamer        string
+		imageBackedPeas bool
+		wantError       bool
 	}{
 		{streamer: "*rundmc.NstarStreamer"},
 		{runtimeType: "io.containerd.runc.v2", streamer: "*rundmc.NstarStreamer"},
-		{runtimeType: "io.containerd.runsc.v1", streamer: "*rundmc.ExecStreamer", execPeas: true},
+		{runtimeType: "io.containerd.runsc.v1", streamer: "*rundmc.ExecStreamer", imageBackedPeas: true},
 		{runtimeType: "io.containerd.kata.v2", wantError: true},
 		{runtimeType: "io.containerd.runsc.v2", wantError: true},
 	} {
@@ -145,8 +145,11 @@ func TestContainerizerWithContainerdUsesValidatedStrategies(t *testing.T) {
 					if got := wired.FieldByName("streamer").Elem().Type().String(); got != test.streamer {
 						t.Errorf("streamer = %s, want %s", got, test.streamer)
 					}
-					if got := wired.FieldByName("execPeas").Bool(); got != test.execPeas {
-						t.Errorf("execPeas = %v, want %v", got, test.execPeas)
+					if wired.FieldByName("execPeas").Bool() {
+						t.Error("production wiring still enables parent-rootfs exec peas")
+					}
+					if got := wired.FieldByName("imageBackedPeas").Bool(); got != test.imageBackedPeas {
+						t.Errorf("imageBackedPeas = %v, want %v", got, test.imageBackedPeas)
 					}
 				}
 				fixture.mutex.Lock()

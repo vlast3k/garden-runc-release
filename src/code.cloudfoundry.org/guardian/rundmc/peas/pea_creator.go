@@ -1,6 +1,7 @@
 package peas
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -68,6 +69,9 @@ type PeaCreator struct {
 	ProcessBuilder   runrunc.ProcessBuilder
 	ExecRunner       ExecRunner
 	PeaCleaner       gardener.PeaCleaner
+	// Non-nil only for image-backed subcontainers. Stock still uses its
+	// existing temporary-pea username resolver before entering CreatePea.
+	RootfsUserLookupper users.UserLookupper
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle string) (_ garden.Process, theErr error) {
@@ -95,9 +99,13 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	if processSpec.Dir == "" {
 		processSpec.Dir = "/"
 	}
-	userUID, userGID, err := parseUser(processSpec.User)
-	if err != nil {
-		return errs("parse-user", err)
+	var resolvedUser *users.ExecUser
+	if p.RootfsUserLookupper == nil {
+		userUID, userGID, err := parseUser(processSpec.User)
+		if err != nil {
+			return errs("parse-user", err)
+		}
+		resolvedUser = &users.ExecUser{Uid: userUID, Gid: userGID}
 	}
 
 	linuxNamespaces, err := p.linuxNamespaces(log, sandboxHandle, privileged)
@@ -112,6 +120,21 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	})
 	if err != nil {
 		return errs("creating-volume", err)
+	}
+	retainVolume := false
+	defer func() {
+		if theErr != nil && !retainVolume {
+			theErr = multierror.Append(theErr, p.Volumizer.Destroy(log, processID)).ErrorOrNil()
+		}
+	}()
+	if runtimeSpec.Root == nil || runtimeSpec.Root.Path == "" {
+		return errs("creating-volume", errors.New("image rootfs path is missing"))
+	}
+	if p.RootfsUserLookupper != nil {
+		resolvedUser, err = p.RootfsUserLookupper.Lookup(runtimeSpec.Root.Path, processSpec.User)
+		if err != nil {
+			return errs("lookup-image-user", err)
+		}
 	}
 
 	defaultBindMounts, err := p.NetworkDepot.SetupBindMounts(log, sandboxHandle, privileged, runtimeSpec.Root.Path)
@@ -148,11 +171,10 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		Privileged: privileged,
 	})
 	if genErr != nil {
-		destroyErr := p.Volumizer.Destroy(log, processID)
-		return errs("generating-bundle", multierror.Append(genErr, destroyErr))
+		return errs("generating-bundle", genErr)
 	}
 
-	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, processSpec, &users.ExecUser{Uid: userUID, Gid: userGID})
+	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, processSpec, resolvedUser)
 	bndl = bndl.WithProcess(*preparedProcess)
 
 	extraCleanup := func() error {
@@ -161,8 +183,9 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 
 	proc, runErr := p.ExecRunner.RunPea(log, processID, bndl, sandboxHandle, procIO, preparedProcess.Terminal, nil, extraCleanup)
 	if runErr != nil {
-		destroyErr := p.Volumizer.Destroy(log, processID)
-		return nil, multierror.Append(runErr, destroyErr)
+		var runtimeResidue interface{ PeaRootfsInUse() bool }
+		retainVolume = errors.As(runErr, &runtimeResidue) && runtimeResidue.PeaRootfsInUse()
+		return nil, runErr
 	}
 
 	return proc, nil

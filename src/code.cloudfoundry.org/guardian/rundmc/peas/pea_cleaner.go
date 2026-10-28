@@ -13,6 +13,9 @@ type PeaCleaner struct {
 	Waiter       processwaiter.ProcessWaiter
 	Runtime      Runtime
 	PeaPidGetter PeaPidGetter
+	// TaskWaiter is set for grouped runsc children: their host PID identifies
+	// the shared Sentry, not the lifetime of the individual child init task.
+	TaskWaiter func(log lager.Logger, handle string) error
 }
 
 //counterfeiter:generate . Runtime
@@ -49,7 +52,7 @@ func (p *PeaCleaner) Clean(log lager.Logger, handle string) error {
 	var result *multierror.Error
 	err := p.Deleter.Delete(log, handle)
 	if err != nil {
-		result = multierror.Append(result, err)
+		return err // retain a rootfs that the runtime may still be using
 	}
 	err = p.Volumizer.Destroy(log, handle)
 	if err != nil {
@@ -77,6 +80,18 @@ func (p *PeaCleaner) CleanAll(log lager.Logger) error {
 		}
 
 		for _, peaHandle := range peaHandles {
+			if p.TaskWaiter != nil {
+				go func(handle string) {
+					if err := p.TaskWaiter(log, handle); err != nil {
+						log.Error("error-waiting-on-pea-task", err, lager.Data{"peaHandle": handle})
+						return
+					}
+					if err := p.Clean(log, handle); err != nil {
+						log.Error("error-cleaning-up-pea-task", err, lager.Data{"peaHandle": handle})
+					}
+				}(peaHandle)
+				continue
+			}
 			peaPID, err := p.PeaPidGetter.GetPeaPid(log, sandboxHandle, peaHandle)
 			if err != nil {
 				log.Error("error-getting-pea-pid", err, lager.Data{"sandboxHandle": sandboxHandle, "peaHandle": peaHandle})

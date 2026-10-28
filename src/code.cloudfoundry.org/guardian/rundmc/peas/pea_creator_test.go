@@ -14,7 +14,10 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/peas/peasfakes"
+	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
+	"code.cloudfoundry.org/guardian/rundmc/users"
+	"code.cloudfoundry.org/guardian/rundmc/users/usersfakes"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -114,6 +117,48 @@ var _ = Describe("PeaCreator", func() {
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(ctrBundleDir)).To(Succeed())
+	})
+
+	Describe("image-rootfs users and failed-stage cleanup", func() {
+		It("resolves the child user after preparing its own image", func() {
+			lookup := new(usersfakes.FakeUserLookupper)
+			lookup.LookupReturns(&users.ExecUser{Uid: 1234, Gid: 4321, Home: "/child-home", Sgids: []int{5678}}, nil)
+			peaCreator.RootfsUserLookupper = lookup
+			processSpec.User = "childuser"
+			_, err := peaCreator.CreatePea(log, processSpec, pio, ctrHandle)
+			Expect(err).NotTo(HaveOccurred())
+			root, name := lookup.LookupArgsForCall(0)
+			Expect(root).To(Equal("/rootfs/path"))
+			Expect(name).To(Equal("childuser"))
+			_, _, user := processBuilder.BuildProcessArgsForCall(0)
+			Expect(user.Uid).To(Equal(1234))
+			Expect(user.Gid).To(Equal(4321))
+			Expect(user.Sgids).To(Equal([]int{5678}))
+		})
+
+		It("destroys the prepared volume if image user lookup fails", func() {
+			lookup := new(usersfakes.FakeUserLookupper)
+			lookup.LookupReturns(nil, errors.New("missing-image-user"))
+			peaCreator.RootfsUserLookupper = lookup
+			_, err := peaCreator.CreatePea(log, processSpec, pio, ctrHandle)
+			Expect(err).To(MatchError(ContainSubstring("missing-image-user")))
+			Expect(volumizer.DestroyCallCount()).To(Equal(1))
+			Expect(execRunner.RunPeaCallCount()).To(BeZero())
+		})
+
+		It("destroys the volume if network bind preparation fails", func() {
+			networkDepot.SetupBindMountsReturns(nil, errors.New("bind-failure"))
+			_, err := peaCreator.CreatePea(log, processSpec, pio, ctrHandle)
+			Expect(err).To(MatchError(ContainSubstring("bind-failure")))
+			Expect(volumizer.DestroyCallCount()).To(Equal(1))
+		})
+
+		It("retains the image when runtime rollback has failed", func() {
+			execRunner.RunPeaReturns(nil, &runcontainerd.PeaRuntimeCleanupError{Err: errors.New("runtime-residue")})
+			_, err := peaCreator.CreatePea(log, processSpec, pio, ctrHandle)
+			Expect(err).To(MatchError("runtime-residue"))
+			Expect(volumizer.DestroyCallCount()).To(BeZero())
+		})
 	})
 
 	Describe("pea creation succeeding", func() {
