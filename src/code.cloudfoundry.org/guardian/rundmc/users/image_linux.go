@@ -2,6 +2,7 @@ package users
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -16,17 +17,35 @@ func fileReader(file *os.File) io.Reader {
 	return file
 }
 
+func openImageIdentity(root, path string) (*os.File, error) {
+	handle, err := securejoin.OpenInRoot(root, path)
+	if err != nil {
+		return nil, err
+	}
+	defer handle.Close()
+	info, err := handle.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("image identity %s is not a regular file", path)
+	}
+	// OpenInRoot returns an O_PATH descriptor. Reopen the pinned inode rather
+	// than its pathname, retaining confinement without attempting O_PATH reads.
+	return securejoin.Reopen(handle, os.O_RDONLY)
+}
+
 // LookupImageUser reads identity files inside a prepared image root. Absolute
 // image symlinks must not resolve against Guardian's host filesystem.
 func LookupImageUser(root, name string) (*ExecUser, error) {
-	passwd, err := securejoin.OpenInRoot(root, "/etc/passwd")
+	passwd, err := openImageIdentity(root, "/etc/passwd")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
 	if passwd != nil {
 		defer passwd.Close()
 	}
-	group, err := securejoin.OpenInRoot(root, "/etc/group")
+	group, err := openImageIdentity(root, "/etc/group")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
