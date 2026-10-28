@@ -3,6 +3,11 @@
   "recorded_on": "2026-10-28",
   "scope": "Measured application-plus-peas CPU/memory/PID reporting through real Garden HTTP; not independent child enforcement, release assembly, installation, actual Rep or adoption acceptance",
   "status": "PASS for the accounting slice only",
+  "enforcement_followup": {
+    "receipt": "CFAR-1540-CPU.json",
+    "actual": "Later native CPU quota discriminator at the same3d/8cb candidate: stock3/3 PASS, runsc first repetition FAIL at3.94CPU-seconds over4wall-seconds under10% quota; remaining repetitions stopped. Independent cleanup verified",
+    "boundary": "Reporting remains PASS; independent memory and CPU enforcement remain FAIL, not waived"
+  },
   "candidate": {
     "garden_source": "3d4c332608e938f668af4ab2e0ed10e13004b79d",
     "guardian_tree": "1aaa37a3a91d518369fd6ed89d3d667f427995d7",
@@ -82,7 +87,7 @@
   ],
   "remaining": [
     "Independent64MiB child memory enforcement FAIL remains resource-lifecycle-v1.json; high256MiB reporting workload and explicit cleanup kill do not excuse it",
-    "CPU enforcement NOT RUN; memory/CPU guest limits currently remember values without enforcement",
+    "CPU enforcement now FAIL in CFAR-1540-CPU.json; memory/CPU guest limits currently remember values without enforcement",
     "Matched BOSH release assembly, candidate installation, actual live Rep and adoption NOT RUN or BLOCKED; parent verify-project rejects unchanged adopted gitlinks",
     "Historical shipped/lifecycle results remain at f07/3bd, not relabelled as8cb/3d execution"
   ],
