@@ -147,6 +147,31 @@ var _ = Describe("PeaCreator", func() {
 			}))
 		})
 
+		It("rejects nonzero limits for a grouped runsc pea before preparing its image", func() {
+			peaCreator.GroupedRunsc = true
+			bundleGenerator.GenerateReturns(goci.Bundle(), nil)
+			for _, limits := range []garden.ProcessLimits{
+				{CPU: garden.CPULimits{Weight: 1}},
+				{CPU: garden.CPULimits{LimitInShares: 1}},
+				{Memory: garden.MemoryLimits{LimitInBytes: 1}},
+			} {
+				processSpec.OverrideContainerLimits = &limits
+				_, err := peaCreator.CreatePea(log, processSpec, pio, ctrHandle)
+				Expect(err).To(MatchError(ContainSubstring("independent pea limits are unsupported")))
+			}
+			Expect(volumizer.CreateCallCount()).To(BeZero())
+			Expect(execRunner.RunPeaCallCount()).To(BeZero())
+		})
+
+		It("accepts empty override limits for a grouped runsc pea", func() {
+			peaCreator.GroupedRunsc = true
+			bundleGenerator.GenerateReturns(goci.Bundle(), nil)
+			processSpec.OverrideContainerLimits = &garden.ProcessLimits{}
+			_, err := peaCreator.CreatePea(log, processSpec, pio, ctrHandle)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(execRunner.RunPeaCallCount()).To(Equal(1))
+		})
+
 		It("resolves the child user after preparing its own image", func() {
 			lookup := new(usersfakes.FakeUserLookupper)
 			lookup.LookupReturns(&users.ExecUser{Uid: 1234, Gid: 4321, Home: "/child-home", Sgids: []int{5678}}, nil)

@@ -10,6 +10,12 @@ subcontainer identity, and RunPea performs Start after successful Create.
 Grouped children use image-mapped gofer namespaces and the parent's virtual PID
 namespace, not the Sentry's nobody-only host user namespace.
 
+Grouped children share the sandbox's Sentry threads and memory, so the sandbox's
+host cgroup bounds parent and children together. Garden accepts nil or all-zero
+`OverrideContainerLimits` (Envoy and declarative healthchecks) and rejects
+nonzero per-pea CPU or memory limits before preparing the image. Unlike runc,
+healthcheck usage therefore counts against the application's limits.
+
 Attach validates the parent, targets the child task, and uses a single FIFO
 reader with output fanout. Run, attached callers and restart cleanup share Wait
 and task/image cleanup. Stdin remains startup-owned: Attach closes Garden HTTP's

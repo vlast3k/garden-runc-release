@@ -99,6 +99,10 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		return errs("determining-privileged", err)
 	}
 
+	if p.GroupedRunsc && processSpec.OverrideContainerLimits != nil && *processSpec.OverrideContainerLimits != (garden.ProcessLimits{}) {
+		return errs("validating-limits", errors.New("grouped runsc peas share their sandbox's CPU and memory; independent pea limits are unsupported"))
+	}
+
 	if processSpec.Dir == "" {
 		processSpec.Dir = "/"
 	}
