@@ -1,6 +1,8 @@
 package peas
 
 import (
+	"fmt"
+
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/peas/processwaiter"
 	"code.cloudfoundry.org/lager/v3"
@@ -69,6 +71,27 @@ func (p *PeaCleaner) CleanAll(log lager.Logger) error {
 	log.Info("start")
 	defer log.Info("end")
 
+	if p.TaskWaitAndCleaner != nil {
+		// Image-backed metadata can outlive its parent. Discover children directly
+		// and let the shared lifecycle owner validate recorded ownership/cleanup.
+		runtime, ok := p.Runtime.(interface{ PeaHandles() ([]string, error) })
+		if !ok {
+			return fmt.Errorf("runtime does not support image-backed pea discovery")
+		}
+		handles, err := runtime.PeaHandles()
+		if err != nil {
+			return err
+		}
+		for _, handle := range handles {
+			go func(handle string) {
+				if err := p.TaskWaitAndCleaner(log, handle); err != nil {
+					log.Error("error-waiting-and-cleaning-pea-task", err, lager.Data{"peaHandle": handle})
+				}
+			}(handle)
+		}
+		return nil
+	}
+
 	sandboxHandles, err := p.Runtime.ContainerHandles()
 	if err != nil {
 		return err
@@ -82,14 +105,6 @@ func (p *PeaCleaner) CleanAll(log lager.Logger) error {
 		}
 
 		for _, peaHandle := range peaHandles {
-			if p.TaskWaitAndCleaner != nil {
-				go func(handle string) {
-					if err := p.TaskWaitAndCleaner(log, handle); err != nil {
-						log.Error("error-waiting-and-cleaning-pea-task", err, lager.Data{"peaHandle": handle})
-					}
-				}(peaHandle)
-				continue
-			}
 			if p.TaskWaiter != nil {
 				go func(handle string) {
 					if err := p.TaskWaiter(log, handle); err != nil {

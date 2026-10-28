@@ -380,6 +380,16 @@ func (r *RunContainerd) ContainerHandles() ([]string, error) {
 	})
 }
 
+// PeaHandles discovers retained pea metadata even when its parent is absent.
+// WaitAndCleanPea validates ownership before opening IO or deleting anything.
+func (r *RunContainerd) PeaHandles() ([]string, error) {
+	return r.containerManager.BundleIDs(ContainerFilter{
+		Label:        "container-type",
+		Value:        "pea",
+		ComparisonOp: "==",
+	})
+}
+
 func (r *RunContainerd) ContainerPeaHandles(log lager.Logger, sandboxHandle string) ([]string, error) {
 	if r.peaHandlesGetter != nil {
 		return r.peaHandlesGetter.ContainerPeaHandles(log, sandboxHandle)
