@@ -292,7 +292,6 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 		wantTTY           bool
 		wantStatsScope    string
 		wantCPUBandwidth  string
-		wantMemoryLimit   string
 	}{
 		{wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true},
 		{runtimeType: "io.containerd.runc.v2", wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true},
@@ -301,9 +300,9 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 		{runtimeType: "io.containerd.runc.v2", wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true, annotations: map[string]string{"container-type": "garden-init"}},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"sentinel": "retained"}, wantContainerType: "sandbox"},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"io.kubernetes.cri.container-type": "container"}, wantContainerType: "container"},
-		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent", "sentinel": "retained"}, wantContainerType: "container", wantSandboxID: "garden-parent", wantCPUBandwidth: "sentry", wantMemoryLimit: "sentry"},
-		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent", "dev.gvisor.stats.scope": "sandbox"}, wantContainerType: "container", wantSandboxID: "garden-parent", wantCPUBandwidth: "sentry", wantMemoryLimit: "sentry"},
-		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent"}, wantContainerType: "container", wantSandboxID: "garden-parent", wantTTY: true, wantCPUBandwidth: "sentry", wantMemoryLimit: "sentry"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent", "sentinel": "retained"}, wantContainerType: "container", wantSandboxID: "garden-parent", wantCPUBandwidth: "sentry"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent", "dev.gvisor.stats.scope": "sandbox"}, wantContainerType: "container", wantSandboxID: "garden-parent", wantCPUBandwidth: "sentry"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent"}, wantContainerType: "container", wantSandboxID: "garden-parent", wantTTY: true, wantCPUBandwidth: "sentry"},
 		{runtimeType: "io.containerd.runc.v2", wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true, annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent"}, wantTTY: true},
 	} {
 		t.Run(test.runtimeType, func(t *testing.T) {
@@ -404,9 +403,6 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 				}
 				if emitted.Annotations["dev.gvisor.cpu.bandwidth"] != test.wantCPUBandwidth {
 					t.Errorf("CPU bandwidth = %q, want %q", emitted.Annotations["dev.gvisor.cpu.bandwidth"], test.wantCPUBandwidth)
-				}
-				if emitted.Annotations["dev.gvisor.memory.limit"] != test.wantMemoryLimit {
-					t.Errorf("memory limit = %q, want %q", emitted.Annotations["dev.gvisor.memory.limit"], test.wantMemoryLimit)
 				}
 				if emitted.Annotations["sentinel"] != wantSentinel {
 					t.Error("unrelated annotation lost")

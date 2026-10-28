@@ -82,9 +82,6 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 			// The pea runs on its parent's Sentry threads, so its own host
 			// cgroup cannot limit it. Ask the Sentry to enforce its CPU quota.
 			spec.Annotations["dev.gvisor.cpu.bandwidth"] = "sentry"
-			// Likewise its host memory cgroup cannot limit it, so ask the
-			// Sentry to enforce its memory limit.
-			spec.Annotations["dev.gvisor.memory.limit"] = "sentry"
 		} else if _, exists := spec.Annotations["io.kubernetes.cri.container-type"]; !exists {
 			spec.Annotations["io.kubernetes.cri.container-type"] = "sandbox"
 		}
