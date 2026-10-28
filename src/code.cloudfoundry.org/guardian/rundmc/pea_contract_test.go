@@ -86,6 +86,26 @@ var _ = Describe("CFAR-1519: Pea Exec Contract", func() {
 		)
 	})
 
+	Describe("image-backed subcontainer dispatch", func() {
+		It("preserves the image, mounts, named user and IO for PeaCreator", func() {
+			gvisorContainerizer.EnableImageBackedPeas()
+			request := garden.ProcessSpec{ID: "child-id", Path: "/child-only", User: "childuser", Image: garden.ImageRef{URI: "docker:///child-image"}, BindMounts: []garden.BindMount{{SrcPath: "/child-bind", DstPath: "/mnt/token", Mode: garden.BindMountModeRO}}}
+			input := garden.ProcessIO{Stdin: bytes.NewBufferString("input"), Stdout: &bytes.Buffer{}, Stderr: &bytes.Buffer{}}
+			process := new(gardenfakes.FakeProcess)
+			fakePeaCreator.CreatePeaReturns(process, nil)
+			returned, err := gvisorContainerizer.Run(logger, "parent", request, input)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(returned).To(BeIdenticalTo(process))
+			_, forwarded, forwardedIO, parent := fakePeaCreator.CreatePeaArgsForCall(0)
+			Expect(forwarded).To(Equal(request))
+			Expect(forwardedIO).To(Equal(input))
+			Expect(parent).To(Equal("parent"))
+			Expect(fakeOCIRuntime.ExecCallCount()).To(BeZero())
+			Expect(fakeOCIRuntime.BundleInfoCallCount()).To(BeZero())
+			Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(BeZero(), "host Sentry PID cannot identify a child image")
+		})
+	})
+
 	Describe("Image compatibility validation", func() {
 		var healthcheckSpec garden.ProcessSpec
 

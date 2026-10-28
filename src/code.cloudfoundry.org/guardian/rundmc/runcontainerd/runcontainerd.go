@@ -1,6 +1,7 @@
 package runcontainerd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -90,6 +91,7 @@ type RunContainerd struct {
 	peaHandlesGetter          PeaHandlesGetter
 	cleanupProcessDirsOnWait  bool
 	runtimeStopper            RuntimeStopper
+	peaRunner                 *RunContainerPea
 }
 
 func New(containerManager ContainerManager,
@@ -144,7 +146,12 @@ func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pi
 	}
 
 	if r.useContainerdForProcesses {
-		return r.cgroupManager.SetUseMemoryHierarchy(id)
+		if err := r.cgroupManager.SetUseMemoryHierarchy(id); err != nil {
+			if deleteErr := r.containerManager.Delete(log, id); deleteErr != nil {
+				return &PeaRuntimeCleanupError{Err: errors.Join(err, deleteErr)}
+			}
+			return errors.Join(err, r.containerManager.RemoveBundle(log, id))
+		}
 	}
 
 	return nil
@@ -152,6 +159,21 @@ func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pi
 
 func (r *RunContainerd) Start(log lager.Logger, id string) error {
 	return r.containerManager.Start(log, id)
+}
+
+// WaitPea follows the child task, never the lifetime of the shared Sentry PID.
+func (r *RunContainerd) WaitPea(log lager.Logger, id string) error {
+	process, err := r.processManager.GetTask(log, id)
+	if err != nil {
+		var noTask TaskNotFoundError
+		var noContainer ContainerNotFoundError
+		if errors.As(err, &noTask) || errors.As(err, &noContainer) {
+			return nil
+		}
+		return err
+	}
+	_, err = process.Wait()
+	return err
 }
 
 func updateAnnotationsIfNeeded(bundle *goci.Bndl) {
@@ -236,6 +258,25 @@ func (r *RunContainerd) getBundle(log lager.Logger, containerID string) (goci.Bn
 }
 
 func (r *RunContainerd) Attach(log lager.Logger, sandboxID, processID string, io garden.ProcessIO) (garden.Process, error) {
+	if r.peaRunner != nil {
+		spec, err := r.containerManager.Spec(log, processID)
+		if err == nil && spec != nil && spec.Annotations["container-type"] == "pea" {
+			if spec.Annotations["sandbox-container"] != sandboxID {
+				return nil, garden.ProcessNotFoundError{ProcessID: processID}
+			}
+			parent, err := r.containerManager.Spec(log, sandboxID)
+			if isNotFound(err) || (err == nil && parent == nil) {
+				return nil, garden.ContainerNotFoundError{Handle: sandboxID}
+			}
+			if err != nil {
+				return nil, err
+			}
+			return r.peaRunner.Attach(log, sandboxID, processID, io)
+		}
+		if err != nil && !isNotFound(err) {
+			return nil, err
+		}
+	}
 	if !r.useContainerdForProcesses {
 		return r.execer.Attach(log, sandboxID, processID, io)
 	}
@@ -249,6 +290,34 @@ func (r *RunContainerd) Attach(log lager.Logger, sandboxID, processID string, io
 		return nil, err
 	}
 	return NewProcess(log, process, r.cleanupProcessDirsOnWait), nil
+}
+
+// WaitAndCleanPea gives restart cleanup the same Wait/deletion owner as Attach.
+// Do not follow it with another image deletion.
+func (r *RunContainerd) WaitAndCleanPea(log lager.Logger, id string) error {
+	if r.peaRunner == nil {
+		return fmt.Errorf("image-backed pea lifecycle is unavailable")
+	}
+	spec, err := r.containerManager.Spec(log, id)
+	if err != nil {
+		if isNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if spec == nil || spec.Annotations["container-type"] != "pea" || spec.Annotations["sandbox-container"] == "" {
+		return fmt.Errorf("%s is not an owned image-backed pea", id)
+	}
+	process, err := r.peaRunner.Attach(log, spec.Annotations["sandbox-container"], id, garden.ProcessIO{})
+	if err != nil {
+		var noTask TaskNotFoundError
+		if errors.As(err, &noTask) {
+			return r.peaRunner.cleanMissingTask(log, spec.Annotations["sandbox-container"], id)
+		}
+		return err
+	}
+	_, err = process.Wait()
+	return err
 }
 
 func (r *RunContainerd) Delete(log lager.Logger, id string) error {
@@ -308,6 +377,16 @@ func (r *RunContainerd) ContainerHandles() ([]string, error) {
 		Label:        "container-type",
 		Value:        "pea",
 		ComparisonOp: "!=",
+	})
+}
+
+// PeaHandles discovers retained pea metadata even when its parent is absent.
+// WaitAndCleanPea validates ownership before opening IO or deleting anything.
+func (r *RunContainerd) PeaHandles() ([]string, error) {
+	return r.containerManager.BundleIDs(ContainerFilter{
+		Label:        "container-type",
+		Value:        "pea",
+		ComparisonOp: "==",
 	})
 }
 

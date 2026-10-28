@@ -1,6 +1,7 @@
 package peas
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -68,6 +69,12 @@ type PeaCreator struct {
 	ProcessBuilder   runrunc.ProcessBuilder
 	ExecRunner       ExecRunner
 	PeaCleaner       gardener.PeaCleaner
+	// Non-nil only for image-backed subcontainers. Stock still uses its
+	// existing temporary-pea username resolver before entering CreatePea.
+	RootfsUserLookupper users.UserLookupper
+	// GroupedRunsc uses virtual parent namespaces, not the Sentry's host PID
+	// and nobody-only user namespace. Stock peas retain their setns behavior.
+	GroupedRunsc bool
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle string) (_ garden.Process, theErr error) {
@@ -95,9 +102,13 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	if processSpec.Dir == "" {
 		processSpec.Dir = "/"
 	}
-	userUID, userGID, err := parseUser(processSpec.User)
-	if err != nil {
-		return errs("parse-user", err)
+	var resolvedUser *users.ExecUser
+	if p.RootfsUserLookupper == nil {
+		userUID, userGID, err := parseUser(processSpec.User)
+		if err != nil {
+			return errs("parse-user", err)
+		}
+		resolvedUser = &users.ExecUser{Uid: userUID, Gid: userGID}
 	}
 
 	linuxNamespaces, err := p.linuxNamespaces(log, sandboxHandle, privileged)
@@ -112,6 +123,21 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	})
 	if err != nil {
 		return errs("creating-volume", err)
+	}
+	retainVolume := false
+	defer func() {
+		if theErr != nil && !retainVolume {
+			theErr = multierror.Append(theErr, p.Volumizer.Destroy(log, processID)).ErrorOrNil()
+		}
+	}()
+	if runtimeSpec.Root == nil || runtimeSpec.Root.Path == "" {
+		return errs("creating-volume", errors.New("image rootfs path is missing"))
+	}
+	if p.RootfsUserLookupper != nil {
+		resolvedUser, err = p.RootfsUserLookupper.Lookup(runtimeSpec.Root.Path, processSpec.User)
+		if err != nil {
+			return errs("lookup-image-user", err)
+		}
 	}
 
 	defaultBindMounts, err := p.NetworkDepot.SetupBindMounts(log, sandboxHandle, privileged, runtimeSpec.Root.Path)
@@ -148,11 +174,22 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		Privileged: privileged,
 	})
 	if genErr != nil {
-		destroyErr := p.Volumizer.Destroy(log, processID)
-		return errs("generating-bundle", multierror.Append(genErr, destroyErr))
+		return errs("generating-bundle", genErr)
+	}
+	if p.GroupedRunsc {
+		// An absent OCI PID namespace joins runsc's root virtual PID namespace.
+		// Empty Path instead requests a new virtual child namespace. Remove the
+		// base template's PID entry too, rather than only omitting an override.
+		namespaces := make([]specs.LinuxNamespace, 0, len(bndl.Namespaces()))
+		for _, ns := range bndl.Namespaces() {
+			if ns.Type != specs.PIDNamespace {
+				namespaces = append(namespaces, ns)
+			}
+		}
+		bndl = bndl.WithNamespaces(namespaces...)
 	}
 
-	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, processSpec, &users.ExecUser{Uid: userUID, Gid: userGID})
+	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, processSpec, resolvedUser)
 	bndl = bndl.WithProcess(*preparedProcess)
 
 	extraCleanup := func() error {
@@ -161,8 +198,9 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 
 	proc, runErr := p.ExecRunner.RunPea(log, processID, bndl, sandboxHandle, procIO, preparedProcess.Terminal, nil, extraCleanup)
 	if runErr != nil {
-		destroyErr := p.Volumizer.Destroy(log, processID)
-		return nil, multierror.Append(runErr, destroyErr)
+		var runtimeResidue interface{ PeaRootfsInUse() bool }
+		retainVolume = errors.As(runErr, &runtimeResidue) && runtimeResidue.PeaRootfsInUse()
+		return nil, runErr
 	}
 
 	return proc, nil
@@ -177,6 +215,16 @@ func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, pri
 	linuxNamespaces := map[string]string{}
 	linuxNamespaces["mount"] = ""
 	linuxNamespaces["network"] = fmt.Sprintf("/proc/%d/ns/net", originalCtrInitPid)
+	if p.GroupedRunsc {
+		linuxNamespaces["ipc"] = ""
+		linuxNamespaces["uts"] = ""
+		if !privileged {
+			// The gofer needs the template's image UID/GID mappings in a new
+			// namespace, not the shared Sentry's one-ID host namespace.
+			linuxNamespaces["user"] = ""
+		}
+		return linuxNamespaces, nil
+	}
 	linuxNamespaces["ipc"] = fmt.Sprintf("/proc/%d/ns/ipc", originalCtrInitPid)
 	linuxNamespaces["pid"] = fmt.Sprintf("/proc/%d/ns/pid", originalCtrInitPid)
 	linuxNamespaces["uts"] = fmt.Sprintf("/proc/%d/ns/uts", originalCtrInitPid)

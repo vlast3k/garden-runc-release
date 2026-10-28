@@ -121,6 +121,7 @@ type Containerizer struct {
 	runtimeStopper         RuntimeStopper
 	cpuCgrouper            CPUCgrouper
 	execPeas               bool
+	imageBackedPeas        bool
 }
 
 func New(
@@ -205,6 +206,13 @@ func (c *Containerizer) Start(log lager.Logger, handle string) error {
 }
 
 // Run runs a process inside a running container
+// EnableImageBackedPeas selects the subcontainer path. Named users are resolved
+// by PeaCreator against the newly prepared image, not the parent's Sentry PID.
+func (c *Containerizer) EnableImageBackedPeas() {
+	c.imageBackedPeas = true
+	c.execPeas = false
+}
+
 func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("run", lager.Data{"handle": handle, "path": spec.Path})
 
@@ -212,6 +220,9 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	defer log.Info("finished")
 
 	if isPea(spec) {
+		if c.imageBackedPeas {
+			return c.peaCreator.CreatePea(log, spec, io, handle)
+		}
 		if c.execPeas {
 			if err := c.validateExecPea(log, handle, spec); err != nil {
 				return nil, err

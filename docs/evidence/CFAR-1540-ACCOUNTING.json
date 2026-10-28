@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-10-28",
+  "scope": "Measured application-plus-peas CPU/memory/PID reporting through real Garden HTTP; not independent child enforcement, release assembly, installation, actual Rep or adoption acceptance",
+  "status": "PASS for the accounting slice only",
+  "enforcement_followup": {
+    "receipt": "CFAR-1540-CPU.json",
+    "actual": "Later native CPU quota discriminator at the same3d/8cb candidate: stock3/3 PASS, runsc first repetition FAIL at3.94CPU-seconds over4wall-seconds under10% quota; remaining repetitions stopped. Independent cleanup verified",
+    "boundary": "Reporting remains PASS; independent memory and CPU enforcement remain FAIL, not waived"
+  },
+  "candidate": {
+    "garden_source": "3d4c332608e938f668af4ab2e0ed10e13004b79d",
+    "guardian_tree": "1aaa37a3a91d518369fd6ed89d3d667f427995d7",
+    "gvisor_source": "8cb84ebe89d63727191ef5773850679763c443fa",
+    "garden_pr": "https://github.tools.sap/cp-runtime/garden-runc-release/pull/14",
+    "gvisor_pr": "https://github.tools.sap/cp-runtime/gvisor/pull/7",
+    "publication": "Both source commits pushed to existing draft branches; no bot dialogue, merge or adopted pin/release change. Evidence-only commits do not change the tested inline Guardian tree. Self-review disclosed."
+  },
+  "implementation": {
+    "gvisor": "Explicit dev.gvisor.stats.scope=sandbox opt-in on application roots; real control.Usage memory/PID collection and cumulative Kernel.CPUStats including deleted child tasks; retain measured sandbox CPU with or without host cgroup; preserve unannotated CRI root/child semantics",
+    "garden": "Nerd emits the opt-in internally only for runsc application roots and strips it from child specs; actual Create RPC tests verify labels and stats scope",
+    "native_regression": "Real Event collection writes all8MiB through MapInternal(hostarch.Write)/safemem.ZeroSeq, runs an actual busy child and requires CPU retention after deletion; not supplied/fabricated counters",
+    "capability_fixture": "Pin capability-changing goroutine to an OS thread; pinned library Apply(EFFECTIVE) is a no-op, Apply(CAPS) applies capabilities"
+  },
+  "native_source_checks": {
+    "source_manifest": "accounting-input-v8.json",
+    "source_manifest_sha256": "c06f5d6b72c5bd43c602c74f4b3a8889b89323c915a3048d79b1bdcd2054d259",
+    "negative_and_restored": "Original Event/container/Nerd production files each fail the intended regression; restored source passes3 serial repetitions each. accounting-controls-v2 later full-boot failure remains FAIL, not relabelled as a fully passed campaign",
+    "controls_receipt": "accounting-controls-v2/results.json",
+    "controls_receipt_sha256": "bec01fdafbcf351173cb23917a6dbd786dae3a0eb884d9582cfc3156c7f656f8",
+    "broad_receipt": "accounting-broad-v1/results.json",
+    "broad_receipt_sha256": "272a24d5f434b2a935dee7c0a991278cb67f3c519aed9757e1097d758e1561ca",
+    "broad_actual": "14 checks PASS: full boot3x, full specutils, host-CPU, serialization, four shim suites and Nerd plain-test race3x; earlier native-v5/v6 Event/Create RPC race checks also pass",
+    "bounds": "build1200s,2jobs,2048MiB; native tests120s/outer150s; Garden race240s/outer300s; serial repetitions, stop first unexpected result"
+  },
+  "immutable_build": {
+    "receipt": "accounting-committed-v1/results.json",
+    "receipt_sha256": "39cec0bbb78461d857db7fd56d0374d8b4b9c1c71b14445ccc95453ef4060bbc",
+    "actual": "Clean exact candidate commits, config/sandbox suites3x, four matched artifacts and runsc version PASS. Unrelated builder-parent work preserved; no alternate checkouts",
+    "artifacts_sha256": {
+      "runsc": "b71e062d930c5d1ac07af7c00852f59fbf3c1bfabe24e9257706c0621447a37d",
+      "gvisor_sentry": "81b95234ac9f4608c60439f691f31823487984558122646a66295dddffcec7b6",
+      "containerd-shim-runsc-v1": "67e7a41dfd1ea1d812891f981d414f3c3d938a579daff59a1cf4bf81bbd02db6",
+      "gvisor-sentry-prewarmer": "3315d7ad7c2d3751d349e4976fa02da1da6fd7e41746c35622304e5fabe4fce0"
+    }
+  },
+  "http_campaign": {
+    "receipt": "accounting-lifecycle-v2.json",
+    "receipt_sha256": "04dfb68c449bf93ff8c3e65a6abbd3933234429eb43b727b5fb0432408992d4a",
+    "probe_receipt": "bridge-build-accounting-v2.json",
+    "probe_receipt_sha256": "1a7b5a91ca672b4e089f298487b901b2919f3db602a132af1309ca8d6ecea82c",
+    "probe_sha256": "ee89f07805041c3b1f830fe0ed34bb7b7eb36df0834cb738be9ea12f91ebbf92",
+    "boundary": "Real Garden HTTP Run/Signal/Wait/Metrics and production Containerizer/RunContainerd/ContainerdStatser; native parent-rootfs/network setup is a fixture. Runtime explicitly selected, no prepopulated parent annotations. Production DefaultCgrouper with CPU throttling disabled; both controls use ContainerdStatser. Disk/network metrics explicitly excluded",
+    "bounds": "128MiB resident workload;256MiB child limit;1s helper CPU;>=200ms measured CPU;>=128MiB aggregate memory growth;>=96MiB release after deletion; stock parent<32MiB/<100ms growth; parent/child PIDs2/1. readiness5s, operations20s, producer120s/cleanup30s, unit270s/outer300s,8GiB/200%CPU/1024tasks, free>=10GiB; stock/runsc3x serial, stop first unexpected result",
+    "actual": "Stock3/3 and runsc3/3 PASS,3.12-3.77s each; parent survives and CPU remains cumulative after child deletion. runsc parent memory2236416->137310208->2236416 bytes and PIDs1->2->1; stock parent usage remains isolated",
+    "negative": {
+      "name": "nerd-runsc-accounting-negative-v2-1",
+      "gvisor_source": "3bd79c352df8cdbb01e807b7fb463244658fa990",
+      "exit_code": 1,
+      "status": "EXPECTED_RUNTIME_FAIL",
+      "assertion": "aggregate did not include child within 5s",
+      "raw_sha256": "772bac158c70f2a848e79313c75cc8891e4afc4df48bda248cca376b379ba1af",
+      "snapshot_sha256": "511bfb50e9e44644d402ddbea9159855d8b85d2f5afb6989b6059f84f80d6548"
+    },
+    "runs": [
+      {"name": "nerd-runc-accounting-v2-1", "status": "PASS", "raw_sha256": "dc9b765e8c9f866613c34d747f3397a368ce3356fc03d5aefef9843cf97194e1", "snapshot_sha256": "873da1c395504d2c82c19ccd3157e17d5fb0795cc86c24b6768289dc2771cada", "parent_memory_bytes": [57344,57344,57344], "parent_cpu_ns": [9097000,9097000,9097000]},
+      {"name": "nerd-runc-accounting-v2-2", "status": "PASS", "raw_sha256": "b47145b8a58c98d965caa09225c033dc53c87d51a7c43de90fb98bf53ab15090", "snapshot_sha256": "3dcc08986c3da9937e5fbc5f1bc11658c7b8c395eb4784718a9970fd1779da88", "parent_memory_bytes": [57344,57344,57344], "parent_cpu_ns": [9202000,9202000,9202000]},
+      {"name": "nerd-runc-accounting-v2-3", "status": "PASS", "raw_sha256": "00b14045188a2dfea8b6c57154cd859a5a062ae10c07d0a5dda97525d445f799", "snapshot_sha256": "f05fc9d65f54b93309de06a944b82be8dae13be3638cacd5ff76ff06d87befeb", "parent_memory_bytes": [53248,53248,53248], "parent_cpu_ns": [9406000,9406000,9406000]},
+      {"name": "nerd-runsc-accounting-v2-1", "status": "PASS", "raw_sha256": "799c68320568e9234cf74d440eedc725df2f39d3abbcb4de8e659b551a0ebb6b", "snapshot_sha256": "f5eb05b905bfc149e589169936a013a1eb47c2b2ce6327998b70ec3254885d08", "parent_memory_bytes": [2236416,137310208,2236416], "parent_cpu_ns": [123891000,1490014000,1525947000]},
+      {"name": "nerd-runsc-accounting-v2-2", "status": "PASS", "raw_sha256": "5e95773483c1f7d5703e1c9ff16171446fec5fd473bd3b85eb6240b49e59363a", "snapshot_sha256": "b959802966057d889c8f84c7fd7ce0531d9953cd5f2bafcc6b6f13b24dc9bc1e", "parent_memory_bytes": [2236416,137310208,2236416], "parent_cpu_ns": [120539000,1499029000,1534215000]},
+      {"name": "nerd-runsc-accounting-v2-3", "status": "PASS", "raw_sha256": "4f0147be3a61edc3f6ce2d4711899527f3549d57050bf53273d70ac9e37fab35", "snapshot_sha256": "3b7e76c4f0b00550f8fb0e2c4d56a3f4ab5c09d6a6d601816368d3990967d4dd", "parent_memory_bytes": [2236416,137310208,2236416], "parent_cpu_ns": [119230000,1494891000,1531403000]}
+    ]
+  },
+  "independent_verification": {
+    "receipt": "accounting-http-verified-v2.json",
+    "receipt_sha256": "acfc04eb05f90716cea9cf859bc488f0dd6823fd8df76d4846b3f52d38150f5e",
+    "actual": "199 remote files size/hash verified, every inner raw_hashes entry checked, all82 earlier native/build raw checks checked. Every HTTP criterion recomputed from full output. Runtime identities, empty pre-daemon tasks/containers/process inventories and post-run process/mount/socket/cgroup/image/loop cleanup verified; no recovery. Four locks independently reacquired/released; no surviving test/runtime processes",
+    "inventory_sha256": "9acd02d36654774af1953d61650ac58dfec8cff8165711569bca92856d015787",
+    "supplemental_raw_inventory_sha256": "a2cf9f3e6204ba788b1e9fe3ac19a2287a566f48986c2048b1b467258ea62f0c"
+  },
+  "retained_failures": [
+    "accounting-native-v1-v4 fixture/build failures retained; not counted as PASS",
+    "accounting-controls-v1/v2 full-boot capability-fixture failures retained; repaired thread-pinned Apply(CAPS) fixture then full boot passes3x in broad-v1",
+    "bridge-build-accounting-v1.json compile FAIL on excluded-disk interface, SHA256 ad5f90d080e4c041603ecd84e4735e5413dba042acbd64238bad97d31012cd04; versioned adapter repair builds probev2",
+    "accounting-lifecycle-v1.json driver FAIL after expected negative, PermissionError reading root-owned stderr; SHA25687ce015fc214185083392cc7eefb36e8a6949be2a77da0d3a065e711944b1218; v2 privileged stdout/stderr reads preserve all predicates and original evidence",
+    "verify_accounting_http_v1.py KeyError on absent optional recovery field rejected before emitting acceptance; v2 accepts the producer schema and checks all supplemental inner raw hashes"
+  ],
+  "remaining": [
+    "Independent64MiB child memory enforcement FAIL remains resource-lifecycle-v1.json; high256MiB reporting workload and explicit cleanup kill do not excuse it",
+    "CPU enforcement now FAIL in CFAR-1540-CPU.json; memory/CPU guest limits currently remember values without enforcement",
+    "Matched BOSH release assembly, candidate installation, actual live Rep and adoption NOT RUN or BLOCKED; parent verify-project rejects unchanged adopted gitlinks",
+    "Historical shipped/lifecycle results remain at f07/3bd, not relabelled as8cb/3d execution"
+  ],
+  "retention": {
+    "remote": "/home/ubuntu/build/pea-evaluation-20261028",
+    "local": "/private/var/folders/b6/kz7pzjk56db8p_94cbf2dbh40000gn/T/opencode/image-backed-peas-20261028",
+    "subdirectories": ["accounting-native-evidence-v1", "accounting-http-evidence-v1"],
+    "boundary": "Private raw logs/fixtures and binaries retained by hash; no credentials, release archives or blob caches committed"
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-10-28",
+  "scope": "Real inline Garden HTTP image-backed child CPU quota discriminator on native amd64 builder; not repaired enforcement, memory enforcement, BOSH packaging, live Rep or adoption acceptance",
+  "acceptance": "FAIL",
+  "candidate": {
+    "garden_source": "3d4c332608e938f668af4ab2e0ed10e13004b79d",
+    "guardian_tree": "1aaa37a3a91d518369fd6ed89d3d667f427995d7",
+    "gvisor_source": "8cb84ebe89d63727191ef5773850679763c443fa",
+    "matched_artifact_receipt": "CFAR-1540-ACCOUNTING.json",
+    "source_boundary": "No enforcement implementation changes. Tested Garden tree preserved by later evidence-only commits; all four runtime artifacts use clean8cb. Source and release adoption remain unchanged"
+  },
+  "path": {
+    "exercised": "Garden HTTP Run/Signal/Wait -> Containerizer -> PeaCreator -> RunContainerPea -> Nerd -> containerd -> grouped runsc or stock runc; real VolumeProvider/ImagePlugin/GrootFS; internal child CRI and Start, no external labels or manual Start",
+    "limits": "Production bundlerules.Limits with CpuQuotaPerShare100 and Garden CPU.Weight100. On cgroup v2, production goci.setCPUShares renders Resources.Unified cpu.max=10000 100000 and cpu.weight=17, not LinuxResources.CPU. No synthetic host limit writes",
+    "fixtures": "Parent rootfs/network setup, cgroup-directory provisioning and disk/network metric exclusion; not actual live Rep requests",
+    "measurement": "Busy helper CLOCK_MONOTONIC and CLOCK_PROCESS_CPUTIME_ID, actual work-loop batches/checksum and independent host elapsed clock. Not Garden child metrics or a process-less host cgroup counter. gVisor guest CPU clock is tick-based approximation; exact host child CPU attribution is not claimed. Stock additionally proves populated host cgroup, exact cpu.max and real throttling counters",
+    "cleanup": "Measurement precedes explicit cleanup SignalKill/Wait137; parent remains running, child metadata/image/cgroup absence checked. Cleanup signals are not an enforcement substitute"
+  },
+  "predeclared_bounds": {
+    "busy_wall_ns": 4000000000,
+    "control_min_cpu_ns": 1500000000,
+    "limited_min_cpu_ns": 150000000,
+    "limited_max_cpu_ns": 650000000,
+    "quota_us": 10000,
+    "period_us": 100000,
+    "helper_wall_max_ns": 4300000000,
+    "host_elapsed_min_ns": 3800000000,
+    "host_elapsed_max_ns": 10000000000,
+    "phase_seconds": 20,
+    "result_seconds": 10,
+    "probe_seconds": 120,
+    "cleanup_seconds": 30,
+    "unit_seconds": 270,
+    "outer_seconds": 300,
+    "build_seconds": 300,
+    "build_outer_seconds": 320,
+    "jobs": 2,
+    "memory_max_bytes": 8589934592,
+    "cpu_percent": 200,
+    "tasks_max": 1024,
+    "minimum_free_bytes": 10737418240,
+    "repetitions": 3,
+    "order": "Stock3x then runsc3x; each repetition runs unthrottled then10%-limited child serially",
+    "stop": "First unexpected result; preserve full raw failure and independently verify cleanup. Remaining repetitions not counted as PASS"
+  },
+  "build": {
+    "receipt": "bridge-build-cpu-v2.json",
+    "receipt_sha256": "46b54c2a1ec5f9868e7fa1aee2e877a5f3f21b56c0df0767d23df19a0c16316a",
+    "exit_code": 0,
+    "probe_binary_sha256": "9c98d797ba91eb7fe68c4600f2e1acf1e26e4c7deb6a3d3b07a51b574d37a033",
+    "probe_source": "cpu_peas_v2.go",
+    "probe_source_sha256": "05030db7a556a91c81dbcdfec54181e2819ecab692157a8108e21311eb50e33c",
+    "helper_source": "cpu_busy_v1.c",
+    "helper_source_sha256": "558db319dbaba5dbf5883aa2df981a42f496fa7b20819c593576ad7c578d9fd9"
+  },
+  "campaign": {
+    "receipt": "cpu-lifecycle-v2.json",
+    "receipt_sha256": "37d00d723357f5b0e46b6ec92c9347642d6ae988b57954f0215d235f762a582e",
+    "status": "FAIL",
+    "stock": "3/3 PASS; unthrottled CPU3.99965-3.99983s; limited CPU0.40754-0.40907s over4.08665-4.08779s. Populated host cgroup has10000 100000 and actual nr_throttled>=30/throttled_usec>1000000",
+    "runsc": "First repetition FAIL; control CPU3.91s and10%-limited CPU3.94s over4.00023s. OCI Unified cpu.max correct, parent and child share Sentry PID112; child host cgroup process-less and cpu.max=max100000. Repetitions2/3 NOT RUN",
+    "assertion": "independent child CPU quota NOT ENFORCED: CPU=3940000000ns wall=4000229971ns want150000000..650000000ns under10000/100000us",
+    "runs": [
+      {"name": "nerd-runc-cpu-v2-1", "acceptance": "PASS", "control_cpu_ns": 3999651659, "limited_cpu_ns": 407536389, "limited_wall_ns": 4086747802, "raw_sha256": "2d35c5e5f10de4a336e75e03291a4fb69355991395d6e6aed41735f266a3d5aa", "snapshot_sha256": "e48b1d9b7064836698966f8faf92bc3e4070e6537992aa6c4bb49406ee195870"},
+      {"name": "nerd-runc-cpu-v2-2", "acceptance": "PASS", "control_cpu_ns": 3999825271, "limited_cpu_ns": 409040180, "limited_wall_ns": 4087793710, "raw_sha256": "5dda3dae360702bae005138b2d2068261890e28461b82aacb5bb793044b8486c", "snapshot_sha256": "b11f4ad3a7e0f13473cc64f6f1e6d63698c307b53d5f9d9739e9e42dfb58dae3"},
+      {"name": "nerd-runc-cpu-v2-3", "acceptance": "PASS", "control_cpu_ns": 3999804116, "limited_cpu_ns": 409074043, "limited_wall_ns": 4086645935, "raw_sha256": "96fd9359f2bd8890d461952a54fc6cf1a23eb7b705b617aafa84aa101ea22cc3", "snapshot_sha256": "8f1611241d934300299c4bd2c603cafaac92aa64a930a82c6c09ca269d7bead2"},
+      {"name": "nerd-runsc-cpu-v2-1", "acceptance": "FAIL", "control_cpu_ns": 3910000000, "limited_cpu_ns": 3940000000, "limited_wall_ns": 4000229971, "raw_sha256": "cecf4c8a41d58b18301f42ace6f04f6b68024a2b54b14c084d2cd1c0677595ed", "snapshot_sha256": "75e7a5ca9d82407b99cd49e729cdd6eec2d33233c038ffc18076fbdf4684787e", "stderr_sha256": "6eb80e9d315159442b2a15ca5a00916633043607f17126b27cbea4ebc80e80a8"}
+    ]
+  },
+  "independent_verification": {
+    "receipt": "cpu-evidence-verified-v2.json",
+    "receipt_sha256": "729ee41c920c2dfd867c7215da22d725576de73566f521d2f5a5f2d578fdb941",
+    "verification": "PASS for evidence integrity and cleanup, not enforcement acceptance",
+    "actual": "86 retrieved source/raw/evidence files size/hash verified; all inner raw_hashes and campaign/raw/snapshot hashes checked. Exact tested source/artifact identities and full-output quota/clock/cleanup predicates independently recomputed; per-run pre-daemon task/container/runtime inventories and post-run process/mount/socket/cgroup/image/loop inventories empty, no recovery. Four locks independently reacquired/released and no surviving test/runtime processes",
+    "inventory_sha256": "43bde674c9164397d66ca597b66270356ebb4dc0d5b58946c069833aa0b0efdf",
+    "supplemental_source_inventory_sha256": "6aa53b0f70c1de571c1210d57d6ca0ad480ecc5e24d0ccc7763090e0466d64b5",
+    "negative_controls": "Missing quota, weakened quota, over-limit stock clock and missing stock throttling are rejected; runtime enforcement FAIL is never relabelled PASS"
+  },
+  "source_trace": {
+    "garden": "rundmc/bundlerules/limits.go:51-61 -> rundmc/goci/bundle_linux.go:10-30 -> OCI Resources.Unified on v2; the v1 probe incorrectly required Resources.CPU",
+    "guest_v1": "runsc/boot/vfs.go:288-302 selects InitialCgroups only when mountCgroupSubmounts mounted guest controllers. mountCgroupSubmounts:1613-1654 creates and binds directories but does not apply per-child OCI resources. pkg/sentry/fsimpl/cgroupfs/cpu.go:77-81 uses stub files",
+    "guest_v2": "runsc/boot/vfs.go:1403-1475 creates a per-container cgroup only with an OCI cgroup mount and does not apply OCI CPU/memory resources. pkg/sentry/fsimpl/cgroup2fs/cpu.go:263 explicitly states cpu.max remembers values without enforcement",
+    "scheduler": "pkg/sentry/kernel/task_sched.go:267-333 approximates CPU clocks with tick/reservoir sampling and preempts for concurrency, not child quota. task_run.go:239-242 switches to application without a child bandwidth admission gate",
+    "memory": "MemoryFile.Allocate tags MemCgID without synchronous limit charging; directly mapped gofer pages have separate accounting. A memory-file-only cap, async polling kill, empty host limit or accounting change cannot establish independent memory enforcement"
+  },
+  "retained_failures": [
+    "cpu-lifecycle-v1.json FAIL, SHA2562f681ab048da4aeef367e4d2642cadd9b9db9c475862285ce6e8b823095e74da: v1 field oracle stopped first stock run before measurement, independently cleaned. Probe v2 accepts the actual production Unified representation without changing workload/limits/thresholds",
+    "Read-only verifier v1 FileNotFoundError on reused source omitted from retrieval: no receipt emitted. Four sources retrieved/hash-verified, verifier v2 adds supplemental inventory without predicate changes",
+    "cpu-lifecycle-v2.json remains FAIL; reporting/build/cleanup PASS and correct OCI values do not repair enforcement"
+  ],
+  "remaining": [
+    "Genuine synchronous child memory charging/scoped OOM and CPU scheduling/throttling remain unimplemented in owning Sentry source",
+    "Independent memory FAIL remains resource-lifecycle-v1.json; aggregate accounting PASS remains separate CFAR-1540-ACCOUNTING.json",
+    "BOSH packaging, installed candidate, actual Rep and adoption acceptance remain blocked by failed/unexecuted required gates; existing PR7/14/62 remain draft. No bot dialogue or fabricated approval"
+  ],
+  "retention": {
+    "remote": "/home/ubuntu/build/pea-evaluation-20261028",
+    "local": "/private/var/folders/b6/kz7pzjk56db8p_94cbf2dbh40000gn/T/opencode/image-backed-peas-20261028/cpu-evidence-v1",
+    "boundary": "Versioned fixtures/drivers/verifiers and full consequential failures retained by hash; no credentials, binary payloads, release archives or blob caches committed"
+  }
+}

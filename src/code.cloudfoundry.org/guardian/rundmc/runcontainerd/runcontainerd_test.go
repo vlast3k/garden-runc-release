@@ -183,6 +183,17 @@ var _ = Describe("Runcontainerd", func() {
 
 				It("returns the error", func() {
 					Expect(createErr).To(MatchError("NOPE"))
+					Expect(containerManager.DeleteCallCount()).To(Equal(1))
+					Expect(containerManager.RemoveBundleCallCount()).To(Equal(1))
+				})
+				Context("when rollback fails", func() {
+					BeforeEach(func() { containerManager.DeleteReturns(errors.New("runtime-residue")) })
+					It("retains metadata and marks the image as potentially in use", func() {
+						var residue interface{ PeaRootfsInUse() bool }
+						Expect(errors.As(createErr, &residue)).To(BeTrue())
+						Expect(residue.PeaRootfsInUse()).To(BeTrue())
+						Expect(containerManager.RemoveBundleCallCount()).To(BeZero())
+					})
 				})
 			})
 		})
@@ -803,6 +814,21 @@ var _ = Describe("Runcontainerd", func() {
 			It("returns an error", func() {
 				Expect(err).To(MatchError("handles-error"))
 			})
+		})
+	})
+
+	Describe("PeaHandles", func() {
+		It("discovers all pea metadata without requiring a parent label match", func() {
+			containerManager.BundleIDsReturns([]string{"parentless-pea", "live-pea"}, nil)
+			ids, err := runContainerd.PeaHandles()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids).To(ConsistOf("parentless-pea", "live-pea"))
+			Expect(containerManager.BundleIDsArgsForCall(0)).To(ConsistOf(runcontainerd.ContainerFilter{"container-type", "pea", "=="}))
+		})
+		It("preserves discovery errors", func() {
+			containerManager.BundleIDsReturns(nil, errors.New("discovery-error"))
+			_, err := runContainerd.PeaHandles()
+			Expect(err).To(MatchError("discovery-error"))
 		})
 	})
 

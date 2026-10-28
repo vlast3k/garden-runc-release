@@ -322,10 +322,14 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger, metricsProvider *met
 	}, nil
 }
 
-func (cmd *CommonCommand) wirePeaCleaner(factory GardenFactory, volumizer gardener.Volumizer, runtime rundmc.OCIRuntime, pidGetter peas.ProcessPidGetter) gardener.PeaCleaner {
-	if cmd.Containerd.UseContainerdForProcesses {
+func (cmd *CommonCommand) wirePeaCleaner(factory GardenFactory, volumizer gardener.Volumizer, runtime rundmc.OCIRuntime, pidGetter peas.ProcessPidGetter, imageBacked bool) gardener.PeaCleaner {
+	if cmd.Containerd.UseContainerdForProcesses || imageBacked {
 		nerdDeleter := runcontainerd.NewDeleter(runtime)
-		return peas.NewPeaCleaner(deleter.NewDeleter(runtime, nerdDeleter), volumizer, runtime, pidGetter)
+		cleaner := peas.NewPeaCleaner(deleter.NewDeleter(runtime, nerdDeleter), volumizer, runtime, pidGetter)
+		if imageBacked {
+			cleaner.(*peas.PeaCleaner).TaskWaitAndCleaner = runtime.(*runcontainerd.RunContainerd).WaitAndCleanPea
+		}
+		return cleaner
 	}
 
 	cmdRunner := factory.CommandRunner()
@@ -661,7 +665,7 @@ func (cmd *CommonCommand) wireContainerizer(
 		containersPidGetter = nerdPidGetter
 		runtimeStopper = runContainerd
 
-		if cmd.Containerd.UseContainerdForProcesses {
+		if cmd.Containerd.UseContainerdForProcesses || runtimePolicy.IsAlternative() {
 			peaPidGetter = nerdPidGetter
 			peasExecRunner = peaRunner
 		}
@@ -692,7 +696,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
 
-	peaCleaner := cmd.wirePeaCleaner(factory, volumizer, ociRuntime, peaPidGetter)
+	peaCleaner := cmd.wirePeaCleaner(factory, volumizer, ociRuntime, peaPidGetter, runtimePolicy.IsAlternative())
 	peaCreator = &peas.PeaCreator{
 		Volumizer:        volumizer,
 		PidGetter:        containersPidGetter,
@@ -703,6 +707,10 @@ func (cmd *CommonCommand) wireContainerizer(
 		BundleSaver:      bundleSaver,
 		ExecRunner:       peasExecRunner,
 		PeaCleaner:       peaCleaner,
+	}
+	if runtimePolicy.IsAlternative() {
+		peaCreator.RootfsUserLookupper = users.LookupFunc(users.LookupImageUser)
+		peaCreator.GroupedRunsc = true
 	}
 
 	peaUsernameResolver := &peas.PeaUsernameResolver{
@@ -727,8 +735,11 @@ func (cmd *CommonCommand) wireContainerizer(
 		streamer = rundmc.NewNstarStreamer(ociRuntime, nstar)
 	}
 
-	execPeas := runtimePolicy.IsAlternative()
-	return rundmc.New(depot, template, ociRuntime, streamer, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper, execPeas), peaCleaner, nil
+	containerizer := rundmc.New(depot, template, ociRuntime, streamer, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper, false)
+	if runtimePolicy.IsAlternative() {
+		containerizer.EnableImageBackedPeas()
+	}
+	return containerizer, peaCleaner, nil
 }
 
 func (cmd *CommonCommand) useContainerd() bool {

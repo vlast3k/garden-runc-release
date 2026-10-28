@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -111,6 +112,174 @@ func (rpc *policyTasksServer) Kill(_ context.Context, request *tasksapi.KillRequ
 	return nil, status.Error(codes.PermissionDenied, "policy fixture stops before task signaling")
 }
 
+type peaInputTasksServer struct {
+	policyTasksServer
+	closed chan *tasksapi.CloseIORequest
+	killed atomic.Bool
+}
+
+func (rpc *peaInputTasksServer) Create(_ context.Context, request *tasksapi.CreateTaskRequest) (*tasksapi.CreateTaskResponse, error) {
+	rpc.created <- request
+	return &tasksapi.CreateTaskResponse{ContainerID: request.ContainerID, Pid: ^uint32(0)}, nil
+}
+
+func (rpc *peaInputTasksServer) Start(context.Context, *tasksapi.StartRequest) (*tasksapi.StartResponse, error) {
+	return &tasksapi.StartResponse{Pid: ^uint32(0)}, nil
+}
+
+func (rpc *peaInputTasksServer) CloseIO(_ context.Context, request *tasksapi.CloseIORequest) (*emptypb.Empty, error) {
+	rpc.closed <- request
+	return &emptypb.Empty{}, nil
+}
+
+func (rpc *peaInputTasksServer) Delete(context.Context, *tasksapi.DeleteTaskRequest) (*tasksapi.DeleteResponse, error) {
+	return &tasksapi.DeleteResponse{}, nil
+}
+
+func (rpc *peaInputTasksServer) Wait(context.Context, *tasksapi.WaitRequest) (*tasksapi.WaitResponse, error) {
+	return &tasksapi.WaitResponse{}, nil
+}
+
+func (rpc *peaInputTasksServer) Kill(context.Context, *tasksapi.KillRequest) (*emptypb.Empty, error) {
+	// Stock cleanup signals only this fake RPC, never the synthetic host PID.
+	rpc.killed.Store(true)
+	return &emptypb.Empty{}, nil
+}
+
+func (rpc *peaInputTasksServer) Get(ctx context.Context, request *tasksapi.GetRequest) (*tasksapi.GetResponse, error) {
+	response, err := rpc.policyTasksServer.Get(ctx, request)
+	if rpc.killed.Load() {
+		response.Process.Status = tasktypes.Status_STOPPED
+	}
+	return response, err
+}
+
+func TestNerdPeaCloseIOFollowsInputCompletion(t *testing.T) {
+	testNerdPeaInputCompletion(t, false, runcontainerd.RunscRuntime)
+}
+
+func TestNerdTerminalPeaInputCompletionKeepsConsole(t *testing.T) {
+	for _, policy := range []runcontainerd.RuntimePolicy{runcontainerd.StockRuntime, runcontainerd.RunscRuntime} {
+		t.Run(policy.String(), func(t *testing.T) {
+			testNerdPeaInputCompletion(t, true, policy)
+		})
+	}
+}
+
+func testNerdPeaInputCompletion(t *testing.T, terminal bool, policy runcontainerd.RuntimePolicy) {
+	t.Helper()
+	dir := t.TempDir()
+	listener, err := net.Listen("unix", filepath.Join(dir, "containerd.sock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := grpc.NewServer()
+	defer server.Stop()
+	rpc := &peaInputTasksServer{policyTasksServer: policyTasksServer{created: make(chan *tasksapi.CreateTaskRequest, 1)}, closed: make(chan *tasksapi.CloseIORequest, 2)}
+	containersapi.RegisterContainersServer(server, &policyContainersServer{created: make(chan *containersapi.Container, 1)})
+	tasksapi.RegisterTasksServer(server, rpc)
+	go func() { _ = server.Serve(listener) }()
+	c, err := client.New(listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	ctx, cancel := context.WithTimeout(namespaces.WithNamespace(context.Background(), "pea-input"), 5*time.Second)
+	defer cancel()
+	ctx = leases.WithLease(ctx, "fixture-no-lease")
+	log := lagertest.NewTestLogger("pea-input")
+	n := nerd.New(c, ctx, dir, metrics.NewMetricsProvider(log, dir), policy)
+	input, writer := io.Pipe()
+	defer input.Close()
+	defer writer.Close()
+	spec := &specs.Spec{Process: &specs.Process{Args: []string{"/unused"}, Terminal: terminal}, Annotations: map[string]string{"container-type": "pea", "sandbox-container": "parent"}}
+	if err := n.Create(log, "child", spec, 0, 0, func() (io.Reader, io.Writer, io.Writer) { return input, nil, nil }); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		// Also unblock the supplied reader on a failed assertion before releasing
+		// the cached cio workers. This mock never signals a host process.
+		_ = input.Close()
+		if err := n.Delete(log, "child"); err != nil {
+			t.Error(err)
+		}
+	}()
+	request := <-rpc.created
+	// A real FIFO endpoint permits cio's final write without requiring a shim.
+	fifo, err := os.OpenFile(request.Stdin, os.O_RDWR|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fifo.Close()
+	if err := n.Start(log, "child"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-rpc.closed:
+		t.Fatal("CloseIO preceded supplied stdin completion")
+	case <-time.After(50 * time.Millisecond):
+	}
+	if _, err := io.WriteString(writer, "last bytes"); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if terminal {
+		b := make([]byte, 10)
+		if _, err := io.ReadFull(fifo, b); err != nil || string(b) != "last bytes" {
+			t.Fatalf("final terminal FIFO bytes = %q, %v", b, err)
+		}
+		select {
+		case <-rpc.closed:
+			t.Fatal("terminal stdin completion closed the bidirectional console")
+		case <-time.After(50 * time.Millisecond):
+		}
+		return
+	}
+	select {
+	case closed := <-rpc.closed:
+		if !closed.Stdin || closed.ContainerID != "child" {
+			t.Fatalf("CloseIO request = %+v", closed)
+		}
+	case <-ctx.Done():
+		t.Fatal("CloseIO did not follow supplied stdin completion")
+	}
+	b := make([]byte, 10)
+	if _, err := io.ReadFull(fifo, b); err != nil || string(b) != "last bytes" {
+		t.Fatalf("final FIFO bytes = %q, %v", b, err)
+	}
+}
+
+func TestNerdSpecWithoutTask(t *testing.T) {
+	dir := t.TempDir()
+	listener, err := net.Listen("unix", filepath.Join(dir, "containerd.sock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := grpc.NewServer()
+	defer server.Stop()
+	want := &specs.Spec{Annotations: map[string]string{"container-type": "pea", "sandbox-container": "parent"}}
+	encoded, err := typeurl.MarshalAny(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	containersapi.RegisterContainersServer(server, &policyContainersServer{stored: &containersapi.Container{ID: "orphan", Spec: typeurl.MarshalProto(encoded)}})
+	// No TaskService is registered: metadata lookup must not request a task.
+	go func() { _ = server.Serve(listener) }()
+	c, err := client.New(listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	ctx := namespaces.WithNamespace(context.Background(), "spec-orphan")
+	n := nerd.New(c, ctx, dir, metrics.NewMetricsProvider(lagertest.NewTestLogger("metrics"), dir), runcontainerd.RunscRuntime)
+	got, err := n.Spec(lagertest.NewTestLogger("spec"), "orphan")
+	if err != nil || got == nil || got.Annotations["sandbox-container"] != "parent" {
+		t.Fatalf("task-free spec = %+v, %v", got, err)
+	}
+}
+
 func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 	for _, test := range []struct {
 		runtimeType       string
@@ -119,12 +288,23 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 		wantOptions       bool
 		annotations       map[string]string
 		wantContainerType string
+		wantSandboxID     string
+		wantTTY           bool
+		wantStatsScope    string
+		wantCPUBandwidth  string
+		wantMemoryLimit   string
 	}{
 		{wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true},
 		{runtimeType: "io.containerd.runc.v2", wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", wantContainerType: "sandbox"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "garden-init"}, wantContainerType: "sandbox", wantStatsScope: "sandbox"},
+		{runtimeType: "io.containerd.runc.v2", wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true, annotations: map[string]string{"container-type": "garden-init"}},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"sentinel": "retained"}, wantContainerType: "sandbox"},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"io.kubernetes.cri.container-type": "container"}, wantContainerType: "container"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent", "sentinel": "retained"}, wantContainerType: "container", wantSandboxID: "garden-parent", wantCPUBandwidth: "sentry", wantMemoryLimit: "sentry"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent", "dev.gvisor.stats.scope": "sandbox"}, wantContainerType: "container", wantSandboxID: "garden-parent", wantCPUBandwidth: "sentry", wantMemoryLimit: "sentry"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent"}, wantContainerType: "container", wantSandboxID: "garden-parent", wantTTY: true, wantCPUBandwidth: "sentry", wantMemoryLimit: "sentry"},
+		{runtimeType: "io.containerd.runc.v2", wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true, annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent"}, wantTTY: true},
 	} {
 		t.Run(test.runtimeType, func(t *testing.T) {
 			socketDir, err := os.MkdirTemp("", "nerd-policy-")
@@ -162,12 +342,27 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 			ctx, cancel := context.WithTimeout(namespaces.WithNamespace(context.Background(), "garden"), 5*time.Second)
 			defer cancel()
 			ctx = leases.WithLease(ctx, "lease-is-off")
-			manager := nerd.New(containerdClient, ctx, t.TempDir(), nil, policy)
+			policyLog := lager.NewLogger("nerd-policy")
+			manager := nerd.New(containerdClient, ctx, t.TempDir(), metrics.NewMetricsProvider(policyLog, t.TempDir()), policy)
 			wantSentinel := test.annotations["sentinel"]
-			spec := &specs.Spec{Version: specs.Version, Windows: &specs.Windows{}, Process: &specs.Process{Args: []string{"/policy-sentinel"}, Cwd: "/"}, Annotations: test.annotations}
+			spec := &specs.Spec{Version: specs.Version, Windows: &specs.Windows{}, Process: &specs.Process{Args: []string{"/policy-sentinel"}, Cwd: "/", Terminal: test.wantTTY}, Annotations: test.annotations}
 			err = manager.Create(lager.NewLogger("nerd-policy"), "policy-container", spec, 4242, 4343, func() (io.Reader, io.Writer, io.Writer) { return nil, nil, nil })
 			if err == nil || !strings.Contains(err.Error(), "policy fixture stops before runtime creation") {
 				t.Fatalf("Create error = %v, want bounded fixture rejection", err)
+			}
+			// The fixture deliberately exposes a task after failed Create. Owned
+			// rollback must reach its runtime-specific delete path before returning.
+			rollback := taskRPC.deleted
+			if test.wantOptions {
+				rollback = taskRPC.killed
+			}
+			select {
+			case id := <-rollback:
+				if id != "policy-container" {
+					t.Errorf("rollback ID = %q", id)
+				}
+			default:
+				t.Fatal("failed Create did not attempt owned task rollback")
 			}
 			select {
 			case request := <-containerRPC.created:
@@ -201,6 +396,18 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 				if emitted.Annotations["io.kubernetes.cri.container-type"] != test.wantContainerType {
 					t.Errorf("container type = %q, want %q", emitted.Annotations["io.kubernetes.cri.container-type"], test.wantContainerType)
 				}
+				if emitted.Annotations["io.kubernetes.cri.sandbox-id"] != test.wantSandboxID {
+					t.Errorf("sandbox ID = %q, want %q", emitted.Annotations["io.kubernetes.cri.sandbox-id"], test.wantSandboxID)
+				}
+				if emitted.Annotations["dev.gvisor.stats.scope"] != test.wantStatsScope {
+					t.Errorf("stats scope = %q, want %q", emitted.Annotations["dev.gvisor.stats.scope"], test.wantStatsScope)
+				}
+				if emitted.Annotations["dev.gvisor.cpu.bandwidth"] != test.wantCPUBandwidth {
+					t.Errorf("CPU bandwidth = %q, want %q", emitted.Annotations["dev.gvisor.cpu.bandwidth"], test.wantCPUBandwidth)
+				}
+				if emitted.Annotations["dev.gvisor.memory.limit"] != test.wantMemoryLimit {
+					t.Errorf("memory limit = %q, want %q", emitted.Annotations["dev.gvisor.memory.limit"], test.wantMemoryLimit)
+				}
 				if emitted.Annotations["sentinel"] != wantSentinel {
 					t.Error("unrelated annotation lost")
 				}
@@ -209,6 +416,9 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 			}
 			select {
 			case request := <-taskRPC.created:
+				if request.Terminal != test.wantTTY || (test.wantTTY && request.Stderr != "") {
+					t.Errorf("task terminal = %t, stderr = %q; want terminal %t", request.Terminal, request.Stderr, test.wantTTY)
+				}
 				if request.ContainerID != "policy-container" {
 					t.Errorf("task container ID = %q", request.ContainerID)
 				}

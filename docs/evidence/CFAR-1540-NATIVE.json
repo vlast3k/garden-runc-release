@@ -1,0 +1,1870 @@
+{
+  "schema_version": 1,
+  "scope": "Native inline Garden image-backed peas; historical matrices retain their original identities. latest_followup identifies the current candidate; not packaged or live-CF acceptance",
+  "garden_source": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+  "guardian_tree": "128ea6c11c1ed34bbf6b607c8ebdaf9bc5d70177",
+  "gvisor_source": "3bd79c352df8cdbb01e807b7fb463244658fa990",
+  "accounting_followup": {
+    "receipt": "CFAR-1540-ACCOUNTING.json",
+    "garden_source": "3d4c332608e938f668af4ab2e0ed10e13004b79d",
+    "guardian_tree": "1aaa37a3a91d518369fd6ed89d3d667f427995d7",
+    "gvisor_source": "8cb84ebe89d63727191ef5773850679763c443fa",
+    "actual": "Accounting source/native checks, matched four-artifact build and real Garden HTTP stock/runsc3x reporting PASS with intended old-artifact negative; all raw hashes and independent cleanup verified",
+    "boundary": "Reporting only; historical latest_followup remains at f07/3bd. Independent64MiB child memory enforcement FAIL, CPU enforcement/packaging/install/actual Rep/adoption remain open"
+  },
+  "latest_followup": {
+    "garden_source": "f07fd5ea737887e38c6607af567bc1a2d07ffe16",
+    "guardian_tree": "a407a3277d209d406954444c07199fcfb8527b95",
+    "publication": "S5, HTTP Attach and terminal repairs plus consolidated evidence published on cfar-1540-image-backed-peas in draft PR14; remote head verification recorded separately from tested f07 runtime-source identity",
+    "probe": {
+      "receipt": "bridge-build-v26.json",
+      "receipt_sha256": "e83145e4002424cf88af06b9868dbcb6067441ee221f498da6673a9eab336041",
+      "binary_sha256": "9f868f40a81a4c47e4de06473a43718f2cb4638946dcb7ab354b9b33c5a8d7d7",
+      "command": "tools/go/bin/go build -p=2 -trimpath -o tools/bin/bridge-probe-v26 bridge_probe_followup_v7.go shipped_peas_v1.go parentless_peas_v1.go probe_bounds_v1.go; cwd clean inline Guardian at f07fd5ea7",
+      "boundary": "Prepared-image campaigns below use this binary; later shipped probes have their own identities"
+    },
+    "source_repairs": [
+      {
+        "criterion": "Startup cleanup discovers a pea after parent metadata is gone",
+        "commit": "fdaee19d5adf3224546f88d73315f3af422c866d",
+        "implementation": "PeaCleaner uses RunContainerd.PeaHandles independent of parent enumeration and preserves discovery errors",
+        "status": "PASS",
+        "control": "Old 3c7e parent-only discovery fails TestPeaCleanerDiscoversChildrenWithoutParentMetadata; repaired focused/race/error/wiring checks and 176 Rundmc tests pass",
+        "raw": "pea-discovery-regression-v1.json",
+        "raw_sha256": "abb606cc32fc8bd16944c6a8d7206fc0988d1203e5d4c275f3b45fbcb672ac69"
+      },
+      {
+        "criterion": "Output-only Attach works through the actual Garden HTTP server",
+        "commit": "594d0ed3e1a8b7f4a792237ce9366a958a6064de",
+        "implementation": "Close Garden HTTP's unused io.PipeReader endpoint without forwarding input; reject other nonnil readers and preserve initial stdin",
+        "status": "PASS",
+        "control": "Old fdaee source fails TestPeaOutputOnlyAttachThroughGardenHTTP: output-only HTTP attachment rejected server input pipe: cannot attach stdin; repaired focused/race and committed native checks pass",
+        "raw": "http-attach-source-checks-v2.json",
+        "raw_sha256": "276303d112634df697a822c96303d4988731402fa6bc9673f2996e27a2688dd1"
+      },
+      {
+        "criterion": "Terminal stdin EOF must not close the bidirectional console",
+        "commit": "f07fd5ea737887e38c6607af567bc1a2d07ffe16",
+        "implementation": "Retain terminal shim keepalive until task exit/deletion; nonterminal CloseIO still follows the reader's final bytes",
+        "status": "PASS",
+        "control": "Old 594d source fails stock/runsc TestNerdTerminalPeaInputCompletionKeepsConsole: terminal stdin completion closed the bidirectional console; repaired focused/race checks pass",
+        "raw": "terminal-keepalive-checks-v3.json",
+        "raw_sha256": "b32ff3f8716f2bf582fc5bdfb84f8c97a14a042d29ff978da28bef3c0aed8872"
+      }
+    ],
+    "committed_native_checks": {
+      "status": "PASS",
+      "raw": "terminal-committed-checks-v1.json",
+      "raw_sha256": "8339e7ae7389173db38d9db2573a122ea43b5f3b0a7558a22311958a840ae9cd",
+      "checks": "Privileged native rundmc, peas, runcontainerd/..., users, guardiancmd and netplugin; focused race; go vet ./...; go build ./...; native gdn build",
+      "boundary": "Clean f07fd5ea7 component, native amd64; not the parent's Linux acceptance gate or installed packaging"
+    },
+    "prepared_image_campaign": {
+      "status": "PASS",
+      "actual": "30/30: fresh-client TTY, parentless cleanup, IO, restart and orphan; stock/runsc three repetitions each per matrix",
+      "raw": "latest-followup-campaign-v7.json",
+      "raw_bytes": 32040,
+      "raw_sha256": "5638ee8dd3007099e196816881df64f0014fb2bd3dc3c96262c8d9ef38eb3042",
+      "bounds": "20s operations, 5s readiness, 210s unit, 240s outer; 8GiB/200%CPU/1024tasks; serial, stop first unexpected result",
+      "independent_cleanup": "All thirty per-run snapshots have empty tasks/containers/runtime processes before daemon teardown and empty processes/mounts/sockets/workload cgroups/GrootFS images/loops before namespace teardown",
+      "local_verification": "All thirty candidate/probe identities, campaign raw hashes, inner raw hashes and independent inventories rechecked against the retrieved archive"
+    },
+    "retention": {
+      "remote_directory": "/home/ubuntu/build/pea-evaluation-20261028",
+      "local_directory": "/private/var/folders/b6/kz7pzjk56db8p_94cbf2dbh40000gn/T/opencode/image-backed-peas-20261028/terminal-evidence-v1",
+      "archive": "terminal-evidence-v1.tgz",
+      "archive_bytes": 3387764,
+      "archive_sha256": "132b4778acb1de7587dcfa67eac131819b9c81220886ac62eada6b2c7a20cb5e",
+      "verification": "1524 safe regular-file members extracted; every one of the 1523 indexed entries independently size/hash verified"
+    },
+    "deadline_and_recovery_controls": {
+      "status": "PASS for the controls; intentional runtime FAIL remains FAIL",
+      "bounds": "Cold image 90s; normal operations 20s; readiness 5s; producer 180s; recovery cleanup 45s; unit 270s; outer 300s; 8GiB/200%CPU/1024tasks, serial stop-first-unexpected-result",
+      "abort_control": "Old return-on-timeout mutant fails timeout did not abort before cleanup; repaired os.Exit(124) and race checks pass",
+      "descendant_control": "Old PGID-only supervisor fails separate-PGID producer survived timeout; v2 uses PID/start identity and PIDfds, stops detached descendants and passes",
+      "forced_recovery": "supervisor-recovery-control-v3.json: exit124, status FAIL preserved, producer/descendants gone, independent tasks/containers/process/mount/socket/cgroup/image/loop inventories empty; recovery is not acceptance",
+      "raw_directory": "supervisor-evidence/ in the private local retention directory; original raw files remain on the builder"
+    },
+    "shipped_failure_retention": {
+      "archive": "shipped-failures-evidence-v1.tgz",
+      "archive_bytes": 188354,
+      "archive_sha256": "9002fc38b28fa2dbf49f573a15acc138b0ff7ef50f0c64e99589da7b6693e376",
+      "verification": "157 safe regular-file members extracted; all 156 indexed sizes/hashes independently verified locally, including inner stdout/stderr for v10-v15, probe builds v27-v31, HTTP client controls and exact-binary healthcheck controls",
+      "cache_retention": "All five v10-v14 detached backing stores preserved losslessly in gzip; decompressed SHA256 verified before original unlink, archive sizes/hashes rechecked under privileged read access. Reclaimed 4698918912 bytes; no runtime/raw failure evidence deleted",
+      "cache_receipt": "shipped-detached-store-compression-v1.json",
+      "cache_receipt_sha256": "f902c5badedf61b5bd033e8eef8d1170de5239c7302f14d7c7f0f1f645d18490",
+      "v15_retention": "Detached v15 failed-fixture store retained losslessly, decompressed SHA256 verified before original unlink; reclaimed946229248 bytes",
+      "v15_receipt": "shipped-detached-store-compression-v2.json",
+      "v15_receipt_sha256": "809be2ee086c9326c24c78da6a67f4d9b963a95dd95c53d654568a20578b49c5"
+    },
+    "shipped_execution": {
+      "status": "PASS for six native shipped-asset repetitions, not installed/live Rep acceptance",
+      "candidate": "f07fd5ea7/a407a327 inline tree; shipped-v16 probe31; installed Envoy1.37.2/healthcheck/cflinuxfs4 asset bytes",
+      "actual": "Stock3/3 and runsc3/3 pass Envoy version/configuration, actual parent-rootfs loader-negative control, proxy HTTP200, HTTP Attach/Signal/output fanout and shared Wait0, TCP/HTTP startup success and TCP4/HTTP5 closed-port negatives. Independent runtime/process/mount/socket/cgroup/image/loop inventories empty, no recovery. Each run20.95-21.90s",
+      "campaign": "shipped-lifecycle-v16.json",
+      "campaign_bytes": 11512,
+      "campaign_sha256": "9f478b4b619ada5608566e1669485c76f9bca850b13724351a2812dd8de93c6a",
+      "build_receipt_sha256": "2f2c2d586c9bf7b32803a81df0b0bd65ad7227ebe900701b3161e593fa52aa10",
+      "probe_sha256": "b09fcad55895d48115364a3c46b19ea407e0b766df85c5b4714e68957162dee9",
+      "retained_failures": "v7 cold-image timeout; v10 omitted canonical /dev/shm; v11 empty proxy response; v12 proves BusyBox client exit139 (also native host signal11); v13 receives Envoy HTTP426 for HTTP1.0; v14 reaches successful proxy/Signal/shared Wait but fails the log-text oracle; v15 repairs that oracle and demonstrates missing non-loopback healthcheck fixture",
+      "cleanup": "v10-v15 each retain runtime FAIL with empty independent runtime/image/loop/mount/socket/cgroup inventories; recovery observations remain separate",
+      "fixture": "Private eth0 192.0.2.2/32, parent server0.0.0.0:8080; exact-binary host controls discriminate loopback-only exit3, TCP/HTTP success0 and closed-port TCP4/HTTP5",
+      "bounds": "Cold image90s, other operations20s, readiness5s, producer180s, cleanup45s, unit270s/outer300s;8GiB/200%CPU/1024tasks, serial3xstock/runsc, stop first unexpected result",
+      "next_check": "Matched release assembly and installed candidate behavior with actual Rep/Executor requests; resource failures below block acceptance",
+      "boundary": "Real Garden HTTP with reconstructed requests, not captured live Rep behavior or an installed candidate release"
+    },
+    "resource_execution": {
+      "status": "FAIL: independent child memory enforcement; aggregate CF accounting also fails",
+      "campaign": "resource-lifecycle-v1.json",
+      "campaign_bytes": 4672,
+      "campaign_sha256": "0846c22dd6979eb3f41abc05c5560eea905908bcd2b925ad243362b5bdc21771",
+      "build_receipt_sha256": "c8b7375221b8843600a4c9a1e38cd43c8d42fad0cadbff84b55eff91637a9fce",
+      "probe_sha256": "873c347e644f18b42b7793cd104e4d8fc128c8566d2d54c866252278356d1128",
+      "actual": "Stock3/3 pass high256MiB and low64MiB limits for a128MiB touched resident allocation. First runsc repetition succeeds under both limits; remaining runsc repetitions stop. Failure: independent child memory limit NOT ENFORCED:128MiB resident allocation under64MiB limit. Probe explicitly kills the child, obtains Wait137, verifies parent still running and independent cleanup; these do not convert FAIL to PASS",
+      "failure_raw": "nerd-runsc-resource-v1-1.log",
+      "failure_raw_sha256": "55687be36754b4669dc03eaab036f7cec971f86006030309f3a49d9be0c45110",
+      "failure_snapshot_sha256": "d1328dc606b7d662e5a9ac96f7c8b33dc6f06143d6cae20eff35d95512746fdb",
+      "accounting": "Actual type io.containerd.cgroups.v1.Metrics, not v2. Parent TotalUsageTowardLimit2236416 before child,0 while child holds128MiB,2236416 after deletion; child137306112. Parent CPU usage also0 while child runs. Child host cgroup process-less, memory.max=max, memory.current=0",
+      "source_explanation": "gVisor container.go setupCgroupForSubcontainer explicitly creates process-less compatibility cgroups; Update changes host limits only for the root. boot/events.go fallback treats multi-container root as an idle pause container. cgroup2fs memory.max and cpu.max remember values without enforcing them. Host compat limits or fake/polling metrics cannot repair these semantics",
+      "bounds": "Requested OCI child limits verified in real CreatePea path.20s steps/5s readiness, producer120s/cleanup30s (resource wrapper, not shipped180s/45s), unit270s/outer300s;8GiB/200%CPU/1024tasks, serial stop-first-unexpected-result. Actual2.27-2.97s",
+      "remaining": "CPU-limit discriminator NOT RUN; correct application-plus-peas accounting and independent enforcement require owning-source implementation, not acceptance-predicate weakening"
+    },
+    "shipped_resource_verification": {
+      "status": "PASS for evidence integrity only",
+      "local_directory": "/private/var/folders/b6/kz7pzjk56db8p_94cbf2dbh40000gn/T/opencode/image-backed-peas-20261028/shipped-resource-evidence-v1",
+      "verification_receipt": "shipped-resource-verified-v1.json",
+      "verification_sha256": "f46b6794205e3cf178c6367e1d2a1c076cb0ae7b7f11e13f7f7361f5389d6217",
+      "actual": "244 files size/hash checked against fresh privileged remote inventory. All10 outer raw hashes, snapshots, exact source/probe/runtime identities, every shipped criterion and resource metric/failure independently checked; all teardown inventories empty and recovery null",
+      "runs": [
+        {"name": "nerd-runc-shipped-v16-1", "status": "PASS", "exit_code": 0, "raw_sha256": "ea09b321d144929b30e9eae4c7bb26aa449f88111f7200454e990aa9f7461b24", "snapshot_sha256": "303c9ec98deaf69e622786b258e7071e0365b8ffea8a9f7c506d2c7e198b3442"},
+        {"name": "nerd-runc-shipped-v16-2", "status": "PASS", "exit_code": 0, "raw_sha256": "a1e0f6f33ba7216c3ac4ea8e7784e6f637c48e222131652b33b342010cf31404", "snapshot_sha256": "64b7cf9ce9b682ac5a8652d6e76b8eb479a4f9d869426cfcf53c05eda953b348"},
+        {"name": "nerd-runc-shipped-v16-3", "status": "PASS", "exit_code": 0, "raw_sha256": "204601c40cf8e67a588514d232884ca433922290934f5fdd8f49da16898a3d0b", "snapshot_sha256": "5f69e18d04e64375786cc3e32cfff125ec762c4430f86c3fcd259bc09a24b2e4"},
+        {"name": "nerd-runsc-shipped-v16-1", "status": "PASS", "exit_code": 0, "raw_sha256": "95cdf052330aedae94a891a3870081df99bc08f9e50f24d106a5024f6cdd85c2", "snapshot_sha256": "83c0db8d9a3d301691dc3f1138f6f1d1628bab51b9ad1ce399808bda2568552c"},
+        {"name": "nerd-runsc-shipped-v16-2", "status": "PASS", "exit_code": 0, "raw_sha256": "b082a0246e78413c48c08dd0a44d4a18a48cd15c889829df84db4e3219f31fae", "snapshot_sha256": "26af0062f4fea05976108bf4c8380466ee2c52e2c3d67dc1068a51c4d60aa7b5"},
+        {"name": "nerd-runsc-shipped-v16-3", "status": "PASS", "exit_code": 0, "raw_sha256": "c3f01cc8ad802aee24a6e5b12506d8dc80395f4b51be820d9532e0d9dd29cd13", "snapshot_sha256": "192f58e9575b2894cf476b39d1f9d7951389ab0c1e085534cbf64c066fbb4f83"},
+        {"name": "nerd-runc-resource-v1-1", "status": "PASS", "exit_code": 0, "raw_sha256": "fab0edec3d721ca59680dbabf43eec1d5ccc3d3f44822ef1a5a2686ba2fe29b2", "snapshot_sha256": "ea202c52ab3ef20bddbebc38cc4c7ef6a6836eb7c9a0b61c9d8003fa93b2e029"},
+        {"name": "nerd-runc-resource-v1-2", "status": "PASS", "exit_code": 0, "raw_sha256": "e22518365f790b263aa86fb9893b9a9ea5b63e07991314844aca45c18e89d08d", "snapshot_sha256": "bbd3f0cb9d5d7a93454c77fde40781fc267cbd2b7e7b60e8dab9382469160829"},
+        {"name": "nerd-runc-resource-v1-3", "status": "PASS", "exit_code": 0, "raw_sha256": "12b8ca35364dfe3fd634742f40fd92e8dab67e682cc080a6f2158778a38b7e4c", "snapshot_sha256": "429542280c8990eb818d284b4dbc59e98d2f49a0cd5e0bdde781d3b2a6ca5e64"},
+        {"name": "nerd-runsc-resource-v1-1", "status": "FAIL", "exit_code": 1, "raw_sha256": "55687be36754b4669dc03eaab036f7cec971f86006030309f3a49d9be0c45110", "snapshot_sha256": "d1328dc606b7d662e5a9ac96f7c8b33dc6f06143d6cae20eff35d95512746fdb"}
+      ]
+    }
+  },
+  "attach_followup": {
+    "scope": "Native source regression checks on the new candidate; prior runtime campaigns below remain at their recorded 7658f123a identity",
+    "garden_source": "3c7e27954e3dce143cfc8356ed464e44c8e785b7",
+    "guardian_tree": "07a0f31ce56671233d8eae71fc2290d162058db1",
+    "local_raw_shell_artifacts": {
+      "directory": "/Users/I024148/.local/share/opencode/shell/c69486bf2c1d99b3a31d1c60348d36b04a83b132",
+      "files": [
+        {"name": "sh_1813b66ac001wmI5WXlnsopjti.out", "bytes": 10870, "sha256": "f4a433e8be875976882152a44879d1b21a95c6461780edeea0e625fd5670704c"},
+        {"name": "sh_181349adc00101L7C598r5D5yT.out", "bytes": 7306, "sha256": "2c152cee0fbdcc3276fbb4140f87cde207be9dcad5d66b66f349aaa3bfba9c02"},
+        {"name": "sh_181321138001roGXSRRHNlPrNa.out", "bytes": 3830, "sha256": "0a0cb02d6de76fdcb3621d178829b8509b8bf4ce6ebd3b3c20dc6e263df0100d"},
+        {"name": "sh_1813353df001nqdXvLDYGkqXzj.out", "bytes": 4759, "sha256": "70288c060d6ce7d733c99343234aaed089af4cda502a1692e937cd323afd8b22"}
+      ]
+    },
+    "clean_candidate_validation": {
+      "runner": "validate_attach_candidate_v1.py",
+      "instance_id": "i-0aa48e0bb8efc28c6",
+      "go_prefix": ["/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go", "test", "-p=2", "-count=1", "-timeout=120s"],
+      "focused_results": [
+        {"args": ["./rundmc/users"], "exit_code": 0, "output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/users\t0.012s\n"},
+        {"args": ["./rundmc/peas"], "exit_code": 0, "output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/peas\t0.261s\n"},
+        {"args": ["./rundmc/runcontainerd"], "exit_code": 0, "output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/runcontainerd\t0.066s\n"},
+        {"args": ["./guardiancmd", "-run=TestContainerizer"], "exit_code": 0, "output": "ok  \tcode.cloudfoundry.org/guardian/guardiancmd\t0.017s\n"},
+        {"args": ["./rundmc/runcontainerd/nerd", "-run=TestNerd"], "exit_code": 0, "output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd\t0.121s\n"}
+      ],
+      "rundmc_command": ["sudo", "-n", "timeout", "--kill-after=5s", "130s", "unshare", "--mount", "--propagation=private", "/home/ubuntu/build/pea-evaluation-20261028/rundmc-3c7e27954.test", "-test.timeout=120s", "-test.count=1"],
+      "rundmc_exit_code": 0,
+      "rundmc_actual": "176 Passed | 0 Failed | 0 Pending | 0 Skipped",
+      "other_checks": [
+        {"args": ["build", "-p=2", "-trimpath", "-o", "/home/ubuntu/build/pea-evaluation-20261028/gdn-3c7e27954", "./cmd/gdn"], "exit_code": 0, "output": ""},
+        {"args": ["vet", "-p=2", "./..."], "exit_code": 0, "output": ""},
+        {"args": ["build", "-p=2", "./..."], "exit_code": 0, "output": ""},
+        {"args": ["test", "-race", "-p=2", "-count=1", "-timeout=120s", "./rundmc/runcontainerd", "./rundmc/runcontainerd/nerd", "-run=TestPea|TestNerdPea"], "exit_code": 0, "output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/runcontainerd\t1.032s\nok  \tcode.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd\t1.143s\n"}
+      ],
+      "build_boundary": "Native gdn and probe v15 builds succeeded, but their digests were not retrieved before network access failed. No runtime run or installed identity is attributed to these builds."
+    },
+    "review_dispositions": {
+      "CFAR1540-S3": {
+        "claim": "Fresh-client Attach always uses non-terminal IO because AttachTask omits cio.WithTerminal",
+        "disposition": "NOT SUBSTANTIATED as a source defect; historical 3c7e execution gap is closed by latest_followup's exact f07 fresh-client TTY campaign",
+        "source_proof": ["vendor/github.com/containerd/containerd/v2/client/container.go: loadTask -> attachExistingIO -> loadFifos copies response.Process.Terminal", "vendor/github.com/containerd/containerd/v2/pkg/cio/io_unix.go: openFifos/copyIO suppress stderr when fifos.Terminal is true", "gVisor pkg/shim/v1/runsc/service.go State returns sio.Terminal"],
+        "discriminator": "TestNerdPeaFreshAttachUsesRuntimeTerminal passes under race for both terminal and nonterminal. OCI Process.Terminal deliberately disagrees with the runtime response. Terminal stderr names a missing directory and must never be opened; nonterminal stdout/stderr bytes must both be delivered. No production terminal-attach change was made."
+      },
+      "CFAR1540-S4": {
+        "claim": "Pea Attach can open child IO through missing parent metadata",
+        "disposition": "REPAIRED AND REVALIDATED",
+        "implementation": "Look up parent metadata after matching child ownership; map missing parent to Garden ContainerNotFoundError and preserve other parent lookup errors before child IO is opened.",
+        "control_base": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "control_command": ["/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go", "test", "-race", "-p=2", "-count=1", "-timeout=30s", "./rundmc/runcontainerd", "-run=TestPeaAttachRejectsMissingParentBeforeOpeningChildIO", "-v"],
+        "control_exit_code": 1,
+        "control_actual": "Both container_parent_not_found and metadata_unavailable fail with 'missing parent opened child IO' and error=<nil>",
+        "repaired_command": ["/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go", "test", "-race", "-p=2", "-count=1", "-timeout=30s", "./rundmc/runcontainerd", "-run=TestPea", "-v"],
+        "repaired_exit_code": 0,
+        "owned_overlay_identity": {
+          "pea_attach_test.go": "e9795dbf7a4e546aca3669ecd17d65c70da0a08002bf5bb0e2519be48e2a2964",
+          "pea_attach_linux_test.go": "bc9cec67f367b40e9630fb9e6536fcdde0d2640ce237708a16f367e0eb914e8f",
+          "old_runcontainerd.go": "400f1724eb77e98fb8decd15d21b6e283bd3a141f9f7b2ee8defde411770c3b0",
+          "repaired_runcontainerd.go": "2f98171bed589b0b9087621fe07b0cca5df31145ac3647b8f19a7cf458c96b21"
+        },
+        "overlay_boundary": "The first discrimination used owned test/source overlays on clean 7658f, restored afterward. The committed 3c7e candidate then passed clean native validation separately; its files match the repaired overlay hashes."
+      }
+    },
+    "retained_fixture_failures": [
+      "Attach-review-v1 failed because the fixture FIFO readers could see EOF before writers opened; teardown also lacked a non-signaling stopped-task response. Fixture keepalive endpoints and explicit stopped Wait/Kill responses repaired it.",
+      "Attach-review-v2's S4 test failed with unrelated 'child task attachment is unavailable'. The v3 control uses a working task attacher and demonstrably opens child IO through the missing parent on old source. The unrelated v2 rejection is not credited as discrimination."
+    ],
+    "shipped_assets": {
+      "source_instance": "cf_cells_1/diego-cell/178aba96-7728-4b96-a6a3-725748160b8a",
+      "source_director": "ba9f258f-b616-46cb-a7af-44b2ec6413fb",
+      "verification": "Installed cell, guarded OCI, local and builder copies independently match each asset's bytes and SHA256; the historical ingress/transfer blocker is resolved.",
+      "files": [
+        {"installed_path": "/var/vcap/packages/proxy/envoy", "bytes": 90411184, "sha256": "32d3cc203b8abdce8c2ed916a298124364e0c48e83b7196f551e769b6a489bf8"},
+        {"installed_path": "/var/vcap/packages/healthcheck/healthcheck", "bytes": 8602202, "sha256": "bceeb4880b4ef244486dfd4448d77c22ed14aa2d67833efc10b31550564e7480"},
+        {"installed_path": "/var/vcap/packages/cflinuxfs4/rootfs.tar", "bytes": 1457131520, "sha256": "23b77c7d06171d55613dae3cc69901cb38171739df866001ff4b3191ef7cca70"}
+      ],
+      "healthcheck_help": "The verified shipped healthcheck -h was executed natively to inspect flags. This is not execution as a Garden pea."
+    },
+    "execution_blocker": {
+      "status": "RESOLVED: owner-approved persistent TCP22 193.0.0.0/8 ingress; sg-063a7a6e8c1bf8b16 rule sgr-005a235e7122d45ea verified, SSH works and builder asset hashes match. Historical attempt below is retained, not current availability.",
+      "criterion": "New-candidate runtime regressions, shipped Envoy/healthcheck image execution and actual Garden HTTP boundary",
+      "attempt": "Inventory-revalidated direct SSH and rsync to ubuntu@18.206.178.165 using the existing verified key and host-key policy",
+      "actual": "SSH port22 timed out before authentication. EC2 running; instance/system/EBS reachability passed. Current egress193.57.20.71 is outside both attached security groups' SSH CIDRs; SSM inventory is empty.",
+      "missing_input": "None for builder access; current acceptance gaps are recorded in latest_followup and retained_gates.",
+      "retained_required_gates": ["Native shipped6/6 PASS; live-CF OPEN", "Independent memory enforcement and aggregate accounting FAIL; CPU NOT RUN", "Packaging/install NOT RUN", "Parent/adoption BLOCKED"]
+    }
+  },
+  "environment": {
+    "instance_id": "i-0aa48e0bb8efc28c6",
+    "platform": "Linux 6.8.0-1060-aws x86_64",
+    "containerd": "2.4.2 b7a25261e029d68978bbf290df0a62fc819b3c51"
+  },
+  "probe": {
+    "source": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+    "command": [
+      "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+      "build",
+      "-p=2",
+      "-trimpath",
+      "-o",
+      "/home/ubuntu/build/pea-evaluation-20261028/tools/bin/bridge-probe-v14",
+      "/home/ubuntu/build/pea-evaluation-20261028/bridge_probe_v1.go"
+    ],
+    "exit_code": 0,
+    "seconds": 1.4670358151197433,
+    "probe_source_sha256": "156e36cdec497cdd933a50807cd28f0469d48e839062775cead30af42f2aa46d",
+    "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "binary_sha256": "07303860fff4ca11e8efad446ae27dbed77db1d46c20bd00cba2b1747fc0a23e"
+  },
+  "runtime": {
+    "runsc/runsc_/runsc": {
+      "sha256": "27f36281b409b310e6cdfcce67f57a3ecb6bb84e8724931f0c2fbc94de06dbbf",
+      "bytes": 83116194,
+      "path": "/home/ubuntu/build/pea-evaluation-20261028/recreate-native-v1/artifacts/runsc",
+      "built_path": "/home/ubuntu/.cache/bazel/_bazel_ubuntu/49ccbdc5d2621b065b94ee80841e74fd/execroot/_main/bazel-out/k8-fastbuild/bin/runsc/runsc_/runsc",
+      "source_commit": "3bd79c352df8cdbb01e807b7fb463244658fa990"
+    },
+    "runsc/cmd/sentry/gvisor_sentry_/gvisor_sentry": {
+      "sha256": "e31afe7d922cc874334fcb128f0d26803eb5492cc56228b45039467093492b9c",
+      "bytes": 32821410,
+      "path": "/home/ubuntu/build/pea-evaluation-20261028/recreate-native-v1/artifacts/gvisor_sentry",
+      "built_path": "/home/ubuntu/.cache/bazel/_bazel_ubuntu/49ccbdc5d2621b065b94ee80841e74fd/execroot/_main/bazel-out/k8-fastbuild/bin/runsc/cmd/sentry/gvisor_sentry_/gvisor_sentry",
+      "source_commit": "3bd79c352df8cdbb01e807b7fb463244658fa990"
+    },
+    "shim/containerd-shim-runsc-v1_/containerd-shim-runsc-v1": {
+      "sha256": "7e0a0d07fb3dbc10f42feb4177dcc39df78a3551529a28e9817afa6f11cbeb94",
+      "bytes": 29868194,
+      "path": "/home/ubuntu/build/pea-evaluation-20261028/recreate-native-v1/artifacts/containerd-shim-runsc-v1",
+      "built_path": "/home/ubuntu/.cache/bazel/_bazel_ubuntu/49ccbdc5d2621b065b94ee80841e74fd/execroot/_main/bazel-out/k8-fastbuild/bin/shim/containerd-shim-runsc-v1_/containerd-shim-runsc-v1",
+      "source_commit": "3bd79c352df8cdbb01e807b7fb463244658fa990"
+    },
+    "runsc/prewarmer/gvisor-sentry-prewarmer": {
+      "sha256": "3315d7ad7c2d3751d349e4976fa02da1da6fd7e41746c35622304e5fabe4fce0",
+      "bytes": 1416,
+      "path": "/home/ubuntu/build/pea-evaluation-20261028/recreate-native-v1/artifacts/gvisor-sentry-prewarmer",
+      "built_path": "/home/ubuntu/.cache/bazel/_bazel_ubuntu/49ccbdc5d2621b065b94ee80841e74fd/execroot/_main/bazel-out/k8-fastbuild/bin/runsc/prewarmer/gvisor-sentry-prewarmer",
+      "source_commit": "3bd79c352df8cdbb01e807b7fb463244658fa990"
+    }
+  },
+  "grootfs": {
+    "candidate": "3f61915f6388403fa455c641c6102253ddd81028",
+    "results": [
+      {
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "build",
+          "-p=2",
+          "-trimpath",
+          "-tags=cloudfoundry",
+          "-o",
+          "/home/ubuntu/build/pea-evaluation-20261028/grootfs-3f61915f6",
+          "./grootfs"
+        ],
+        "exit_code": 0,
+        "seconds": 9.484511049464345,
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "path": "/home/ubuntu/build/pea-evaluation-20261028/grootfs-3f61915f6",
+        "sha256": "f031378a0e420b0a342b0f2e4c07a3224ecfc776bd3d315fb28d37d0239b0d5c"
+      },
+      {
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "build",
+          "-p=2",
+          "-trimpath",
+          "-tags=cloudfoundry",
+          "-o",
+          "/home/ubuntu/build/pea-evaluation-20261028/tardis-3f61915f6",
+          "./grootfs/store/filesystems/overlayxfs/tardis"
+        ],
+        "exit_code": 0,
+        "seconds": 1.4169748406857252,
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "path": "/home/ubuntu/build/pea-evaluation-20261028/tardis-3f61915f6",
+        "sha256": "3d9e0bf691f45a449e63ec5b303b5e423d1bcd272d3098f526da567d151d8722"
+      }
+    ]
+  },
+  "bounds": {
+    "step_seconds": 20,
+    "readiness_seconds": 5,
+    "unit_seconds": 210,
+    "outer_seconds": 240,
+    "repetitions_per_runtime_per_matrix": 3,
+    "memory_max": "8G",
+    "cpu_quota": "200%",
+    "tasks_max": 1024,
+    "stop": "first unexpected result, independently observe cleanup before next campaign"
+  },
+  "checks": [
+    {
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "test",
+          "-p=2",
+          "-count=1",
+          "-timeout=120s",
+          "./rundmc/users"
+        ],
+        "exit_code": 0,
+        "seconds": 0.6648948667570949,
+        "log_sha256": "1e2d4843c2a188e4912b42dfcf7c94ef620b37183e46f3e8f0d4abc19e8b719c"
+      },
+      "raw_output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/users\t0.013s\n"
+    },
+    {
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "test",
+          "-p=2",
+          "-count=1",
+          "-timeout=120s",
+          "./rundmc/peas"
+        ],
+        "exit_code": 0,
+        "seconds": 1.1161189135164022,
+        "log_sha256": "1f36e1bbde8f01291d954ef8938dacf1ff2126d7362ccb65d6a2362573396ec6"
+      },
+      "raw_output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/peas\t0.263s\n"
+    },
+    {
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "test",
+          "-p=2",
+          "-count=1",
+          "-timeout=120s",
+          "./rundmc/runcontainerd"
+        ],
+        "exit_code": 0,
+        "seconds": 0.9155111089348793,
+        "log_sha256": "7938100aa6f3a7c67fed4caaa6cfa641e529970eb469e45bfc53c1a5a5aa44ca"
+      },
+      "raw_output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/runcontainerd\t0.066s\n"
+    },
+    {
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "test",
+          "-p=2",
+          "-count=1",
+          "-timeout=120s",
+          "./guardiancmd",
+          "-run=TestContainerizer"
+        ],
+        "exit_code": 0,
+        "seconds": 1.4164303410798311,
+        "log_sha256": "9ca00f591d21efdd3afedd0450bd6e1f6911116ed0fcff77bc3858d0039209fe"
+      },
+      "raw_output": "ok  \tcode.cloudfoundry.org/guardian/guardiancmd\t0.017s\n"
+    },
+    {
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "test",
+          "-p=2",
+          "-count=1",
+          "-timeout=120s",
+          "./rundmc/runcontainerd/nerd",
+          "-run=TestNerdRuntimePolicyCreatePayload"
+        ],
+        "exit_code": 0,
+        "seconds": 2.0677360417321324,
+        "log_sha256": "74d71948b10d671e6ed2d5089da07003e56f89c97ea097adddd03e44928c3f4b"
+      },
+      "raw_output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd\t0.044s\n"
+    },
+    {
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "test",
+          "-c",
+          "-p=2",
+          "-o",
+          "/home/ubuntu/build/pea-evaluation-20261028/rundmc-7658f123a.test",
+          "./rundmc"
+        ],
+        "exit_code": 0,
+        "seconds": 1.1164791295304894,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "raw_output": ""
+    },
+    {
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "command": [
+          "sudo",
+          "-n",
+          "timeout",
+          "--kill-after=5s",
+          "130s",
+          "unshare",
+          "--mount",
+          "--propagation=private",
+          "/home/ubuntu/build/pea-evaluation-20261028/rundmc-7658f123a.test",
+          "-test.v",
+          "-test.timeout=120s",
+          "-test.count=1"
+        ],
+        "exit_code": 0,
+        "seconds": 1.7677621422335505,
+        "log_sha256": "2cd0389b4e7d0af0782423856767335fe6c229ccf6edf1bb7e350c4bb2a7a825"
+      },
+      "raw_output": "=== RUN   TestRundmc\nRunning Suite: Rundmc Suite - /home/ubuntu/build/cfar1530-parent-c26dc40-20261025/repos/garden-runc-release/src/code.cloudfoundry.org/guardian\n==============================================================================================================================================\nRandom Seed: \u001b[1m1793167198\u001b[0m\n\nWill run \u001b[1m176\u001b[0m of \u001b[1m176\u001b[0m specs\n\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\u001b[38;5;10m\u2022\u001b[0m\n\n\u001b[38;5;10m\u001b[1mRan 176 of 176 Specs in 0.037 seconds\u001b[0m\n\u001b[38;5;10m\u001b[1mSUCCESS!\u001b[0m -- \u001b[38;5;10m\u001b[1m176 Passed\u001b[0m | \u001b[38;5;9m\u001b[1m0 Failed\u001b[0m | \u001b[38;5;11m\u001b[1m0 Pending\u001b[0m | \u001b[38;5;14m\u001b[1m0 Skipped\u001b[0m\n--- PASS: TestRundmc (0.04s)\n=== RUN   TestExecStreamCloseDrainsRuntimeOutput\n--- PASS: TestExecStreamCloseDrainsRuntimeOutput (0.00s)\n=== RUN   TestExecArchiveRoundTrips\n=== RUN   TestExecArchiveRoundTrips/path=file_with_spaces\n=== RUN   TestExecArchiveRoundTrips/path=--checkpoint=1\n=== RUN   TestExecArchiveRoundTrips/path=\n=== RUN   TestExecArchiveRoundTrips/path=/\n=== RUN   TestExecArchiveRoundTrips/missing-path\n=== RUN   TestExecArchiveRoundTrips/invalid-input-archive\n--- PASS: TestExecArchiveRoundTrips (0.04s)\n    --- PASS: TestExecArchiveRoundTrips/path=file_with_spaces (0.01s)\n    --- PASS: TestExecArchiveRoundTrips/path=--checkpoint=1 (0.01s)\n    --- PASS: TestExecArchiveRoundTrips/path= (0.01s)\n    --- PASS: TestExecArchiveRoundTrips/path=/ (0.01s)\n    --- PASS: TestExecArchiveRoundTrips/missing-path (0.00s)\n    --- PASS: TestExecArchiveRoundTrips/invalid-input-archive (0.00s)\n=== RUN   TestExecStreamOutGardenErrors\n=== RUN   TestExecStreamOutGardenErrors/empty-success\n=== RUN   TestExecStreamOutGardenErrors/success\n=== RUN   TestExecStreamOutGardenErrors/exit-before-output\n=== RUN   TestExecStreamOutGardenErrors/exit-small-output\n=== RUN   TestExecStreamOutGardenErrors/exit-after-output\n=== RUN   TestExecStreamOutGardenErrors/wait-before-output\n=== RUN   TestExecStreamOutGardenErrors/wait-small-output\n=== RUN   TestExecStreamOutGardenErrors/wait-after-output\n=== RUN   TestExecStreamOutGardenErrors/exec\n--- PASS: TestExecStreamOutGardenErrors (0.01s)\n    --- PASS: TestExecStreamOutGardenErrors/empty-success (0.00s)\n    --- PASS: TestExecStreamOutGardenErrors/success (0.00s)\n    --- PASS: TestExecStreamOutGardenErrors/exit-before-output (0.00s)\n    --- PASS: TestExecStreamOutGardenErrors/exit-small-output (0.00s)\n    --- PASS: TestExecStreamOutGardenErrors/exit-after-output (0.00s)\n    --- PASS: TestExecStreamOutGardenErrors/wait-before-output (0.00s)\n    --- PASS: TestExecStreamOutGardenErrors/wait-small-output (0.00s)\n    --- PASS: TestExecStreamOutGardenErrors/wait-after-output (0.00s)\n    --- PASS: TestExecStreamOutGardenErrors/exec (0.00s)\n=== RUN   TestExecStreamOutBlockedWriterClose\n--- PASS: TestExecStreamOutBlockedWriterClose (0.00s)\n=== RUN   TestExecStreamerUserArguments\n=== RUN   TestExecStreamerUserArguments/user=\n=== RUN   TestExecStreamerUserArguments/user=root\n=== RUN   TestExecStreamerUserArguments/user=1234\n=== RUN   TestExecStreamerUserArguments/user=alice\n--- PASS: TestExecStreamerUserArguments (0.00s)\n    --- PASS: TestExecStreamerUserArguments/user= (0.00s)\n    --- PASS: TestExecStreamerUserArguments/user=root (0.00s)\n    --- PASS: TestExecStreamerUserArguments/user=1234 (0.00s)\n    --- PASS: TestExecStreamerUserArguments/user=alice (0.00s)\n=== RUN   TestExecStreamOutConcurrentStderrWaitFailure\n--- PASS: TestExecStreamOutConcurrentStderrWaitFailure (0.00s)\n=== RUN   TestExecStreamOutCancellation\n=== RUN   TestExecStreamOutCancellation/pending-exec-is-killed-once-and-wait-finishes\n=== RUN   TestExecStreamOutCancellation/completed-exec-is-not-killed\n--- PASS: TestExecStreamOutCancellation (0.00s)\n    --- PASS: TestExecStreamOutCancellation/pending-exec-is-killed-once-and-wait-finishes (0.00s)\n    --- PASS: TestExecStreamOutCancellation/completed-exec-is-not-killed (0.00s)\n=== RUN   TestGardenClientPostCommitmentErrorNotCleanEOF\n=== RUN   TestGardenClientPostCommitmentErrorNotCleanEOF/success-baseline\n=== RUN   TestGardenClientPostCommitmentErrorNotCleanEOF/exit-2\n    streamer_acceptance_linux_test.go:597: post-commitment failure visible: 262144 bytes received, client error: unexpected EOF\n=== RUN   TestGardenClientPostCommitmentErrorNotCleanEOF/wait-error\n    streamer_acceptance_linux_test.go:597: post-commitment failure visible: 262144 bytes received, client error: unexpected EOF\n--- PASS: TestGardenClientPostCommitmentErrorNotCleanEOF (0.00s)\n    --- PASS: TestGardenClientPostCommitmentErrorNotCleanEOF/success-baseline (0.00s)\n    --- PASS: TestGardenClientPostCommitmentErrorNotCleanEOF/exit-2 (0.00s)\n    --- PASS: TestGardenClientPostCommitmentErrorNotCleanEOF/wait-error (0.00s)\n=== RUN   TestStreamerCloseWaitsForWorkerCompletion\n    streamer_acceptance_linux_test.go:756: R3 confirmed: Close blocked until worker goroutine finished\n--- PASS: TestStreamerCloseWaitsForWorkerCompletion (0.10s)\n=== RUN   TestSignalFailureClassification\n=== RUN   TestSignalFailureClassification/benign-exit\n=== RUN   TestSignalFailureClassification/stuck-worker\n    streamer_acceptance_linux_test.go:876: stuck-worker classified correctly in 1.000044124s: stream-out: cancel tar: os: process already finished\n--- PASS: TestSignalFailureClassification (1.00s)\n    --- PASS: TestSignalFailureClassification/benign-exit (0.00s)\n    --- PASS: TestSignalFailureClassification/stuck-worker (1.00s)\n=== RUN   TestGardenClientCancellationReapsExec\n--- PASS: TestGardenClientCancellationReapsExec (0.00s)\n=== RUN   TestGardenClientChurnThenControl\n=== RUN   TestGardenClientChurnThenControl/round-0-success\n=== RUN   TestGardenClientChurnThenControl/round-1-failure\n=== RUN   TestGardenClientChurnThenControl/round-2-cancel\n=== RUN   TestGardenClientChurnThenControl/round-3-success\n=== RUN   TestGardenClientChurnThenControl/round-4-failure\n=== RUN   TestGardenClientChurnThenControl/round-5-cancel\n=== RUN   TestGardenClientChurnThenControl/round-6-success\n=== RUN   TestGardenClientChurnThenControl/round-7-failure\n=== RUN   TestGardenClientChurnThenControl/round-8-cancel\n=== RUN   TestGardenClientChurnThenControl/round-9-success\n=== RUN   TestGardenClientChurnThenControl/control-after-churn\n    streamer_acceptance_linux_test.go:1569: control OK: valid archive with churn-payload after 10 churn rounds\n=== RUN   TestGardenClientChurnThenControl/stalled-readall-deadline\n    streamer_acceptance_linux_test.go:1717: stalled-readall-deadline: deadline fired in 500.065537ms \u2014 goroutine+deadline watchdog confirmed\n--- PASS: TestGardenClientChurnThenControl (0.53s)\n    --- PASS: TestGardenClientChurnThenControl/round-0-success (0.00s)\n    --- PASS: TestGardenClientChurnThenControl/round-1-failure (0.00s)\n    --- PASS: TestGardenClientChurnThenControl/round-2-cancel (0.00s)\n    --- PASS: TestGardenClientChurnThenControl/round-3-success (0.00s)\n    --- PASS: TestGardenClientChurnThenControl/round-4-failure (0.00s)\n    --- PASS: TestGardenClientChurnThenControl/round-5-cancel (0.00s)\n    --- PASS: TestGardenClientChurnThenControl/round-6-success (0.00s)\n    --- PASS: TestGardenClientChurnThenControl/round-7-failure (0.00s)\n    --- PASS: TestGardenClientChurnThenControl/round-8-cancel (0.00s)\n    --- PASS: TestGardenClientChurnThenControl/round-9-success (0.00s)\n    --- PASS: TestGardenClientChurnThenControl/control-after-churn (0.00s)\n    --- PASS: TestGardenClientChurnThenControl/stalled-readall-deadline (0.50s)\nPASS\n"
+    },
+    {
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "build",
+          "-p=2",
+          "-trimpath",
+          "-o",
+          "/home/ubuntu/build/pea-evaluation-20261028/gdn-7658f123a",
+          "./cmd/gdn"
+        ],
+        "exit_code": 0,
+        "seconds": 1.6669338382780552,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "raw_output": ""
+    },
+    {
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "test",
+          "-race",
+          "-p=2",
+          "-count=1",
+          "-timeout=120s",
+          "./rundmc/runcontainerd",
+          "-run=TestPea"
+        ],
+        "exit_code": 0,
+        "seconds": 2.2680409904569387,
+        "log_sha256": "f51f8169da071b086b331948a105f3cb48c93e672c5076964c4dbb84ec887fff"
+      },
+      "raw_output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/runcontainerd\t1.030s\n"
+    },
+    {
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "test",
+          "-race",
+          "-p=2",
+          "-count=1",
+          "-timeout=30s",
+          "./rundmc/runcontainerd/nerd",
+          "-run=TestNerdPeaCloseIO|TestPeaInput|TestNerdSpec|TestNerdRuntimePolicy"
+        ],
+        "exit_code": 0,
+        "seconds": 3.2694876175373793,
+        "raw_sha256": "3ddd1c5e7296662a142b49adb6ca00f0c2c05ae0373f94020860d28a3bdc8aff"
+      },
+      "raw_output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd\t1.297s\n"
+    },
+    {
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "vet",
+          "-p=2",
+          "./..."
+        ],
+        "exit_code": 0,
+        "seconds": 42.757503585889935,
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "raw_output": ""
+    },
+    {
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "build",
+          "-p=2",
+          "./..."
+        ],
+        "exit_code": 0,
+        "seconds": 5.174256164580584,
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "raw_output": ""
+    }
+  ],
+  "controls": [
+    {
+      "record": "io-controls-v1-results.json",
+      "result": {
+        "candidate": "9159977ec9fdf3940e1d070ec7e1a5f4a3651d14",
+        "control": {
+          "source": "9159977ec9fdf3940e1d070ec7e1a5f4a3651d14",
+          "control_source": "383f164c3a4148ca34a13d902fd39752d00b3546",
+          "control": "stdin",
+          "overlay_sha256": "3e3c6883fd16725ca1464c86b6c7f05be3a980f0bde964e7279a50a7181a34d2",
+          "overlay_source_sha256": "cf996ecc36b6d2412bda46d9cce89c59c735c87a8dbe1ae7454c0e29edecd623",
+          "command": [
+            "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+            "build",
+            "-p=2",
+            "-trimpath",
+            "-overlay=/home/ubuntu/build/pea-evaluation-20261028/io-control-stdin-overlay.json",
+            "-o",
+            "/home/ubuntu/build/pea-evaluation-20261028/tools/bin/bridge-probe-io-control-stdin",
+            "/home/ubuntu/build/pea-evaluation-20261028/bridge_probe_v1.go"
+          ],
+          "exit_code": 0,
+          "probe_source_sha256": "156e36cdec497cdd933a50807cd28f0469d48e839062775cead30af42f2aa46d",
+          "binary_sha256": "9b268419a7258b14167b37d45ffe205d4cb87320931fd2282018a95e0e9957d4"
+        },
+        "runtime": "runc",
+        "repeat": "io-control-stdin-1",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runc-io-control-stdin-1",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_io_control_stdin.py",
+          "boot",
+          "runc",
+          "io-control-stdin-1"
+        ],
+        "exit_code": 1,
+        "seconds": 2.218142870813608,
+        "expected_rejection": true,
+        "independent_cleanup": true,
+        "matched": true,
+        "raw_sha256": "63a84707e7a403e8128e3886365afdd80494c4794b14750fdbdf2b5b31fb59d8"
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-control-stdin-1/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-control-stdin-1/child-init.c:33:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   33 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-control-stdin-1/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-control-stdin-1/child-init.c:8:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    8 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.079414686,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.007796286,\"step\":\"start-parent\"}\nIO_PASS tty=false output=\"IO_READY tty=0\\nIO_BYTES=131071 EOF=1\\n\" stderr=\"IO_STDERR\\n\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.272594896,\"step\":\"delayed-stdin-tty-false\"}\n{\"error\":\"IO Wait=129 \\u003cnil\\u003e out=IO_READY tty=1\\r\\n err=\",\"seconds\":0.22721813,\"step\":\"delayed-stdin-tty-true\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000318324,\"step\":\"cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.021916114,\"step\":\"cleanup-delete-pea-parent\"}\nFIXTURE_PARENT_CGROUP_RELEASE path=/sys/fs/cgroup/system.slice/pea-eval-nerd-runc-io-control-stdin-1.service/workloads/pea-parent procs=\"\" error=<nil>\n\nBRIDGE_FAIL IO Wait=129 <nil> out=IO_READY tty=1\n err=\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n"
+    },
+    {
+      "record": "io-controls-v1-results.json",
+      "result": {
+        "candidate": "9159977ec9fdf3940e1d070ec7e1a5f4a3651d14",
+        "control": {
+          "source": "9159977ec9fdf3940e1d070ec7e1a5f4a3651d14",
+          "control_source": "383f164c3a4148ca34a13d902fd39752d00b3546",
+          "control": "stdin",
+          "overlay_sha256": "3e3c6883fd16725ca1464c86b6c7f05be3a980f0bde964e7279a50a7181a34d2",
+          "overlay_source_sha256": "cf996ecc36b6d2412bda46d9cce89c59c735c87a8dbe1ae7454c0e29edecd623",
+          "command": [
+            "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+            "build",
+            "-p=2",
+            "-trimpath",
+            "-overlay=/home/ubuntu/build/pea-evaluation-20261028/io-control-stdin-overlay.json",
+            "-o",
+            "/home/ubuntu/build/pea-evaluation-20261028/tools/bin/bridge-probe-io-control-stdin",
+            "/home/ubuntu/build/pea-evaluation-20261028/bridge_probe_v1.go"
+          ],
+          "exit_code": 0,
+          "probe_source_sha256": "156e36cdec497cdd933a50807cd28f0469d48e839062775cead30af42f2aa46d",
+          "binary_sha256": "9b268419a7258b14167b37d45ffe205d4cb87320931fd2282018a95e0e9957d4"
+        },
+        "runtime": "runsc",
+        "repeat": "io-control-stdin-1",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runsc-io-control-stdin-1",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_io_control_stdin.py",
+          "boot",
+          "runsc",
+          "io-control-stdin-1"
+        ],
+        "exit_code": 0,
+        "seconds": 2.4688770519569516,
+        "expected_rejection": false,
+        "independent_cleanup": true,
+        "matched": false,
+        "raw_sha256": "139b69e9864b1d5b93577175ed99cbf05e9e5df95180fecc9755a39f5f6dce23"
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-control-stdin-1/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-control-stdin-1/child-init.c:33:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   33 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-control-stdin-1/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-control-stdin-1/child-init.c:8:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    8 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.103090364,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.054525867,\"step\":\"start-parent\"}\nIO_PASS tty=false output=\"IO_READY tty=0\\nIO_BYTES=131071 EOF=1\\n\" stderr=\"IO_STDERR\\n\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.333860761,\"step\":\"delayed-stdin-tty-false\"}\nIO_PASS tty=true output=\"IO_READY tty=1\\r\\ndelayed-input\\r\\nIO_STDERR\\r\\nIO_BYTES=14 NEWLINE=1\\r\\n\" stderr=\"\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.307968835,\"step\":\"delayed-stdin-tty-true\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000387914,\"step\":\"cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.094259872,\"step\":\"cleanup-delete-pea-parent\"}\nFIXTURE_PARENT_CGROUP_RELEASE path=/sys/fs/cgroup/system.slice/pea-eval-nerd-runsc-io-control-stdin-1.service/workloads/pea-parent procs=\"\" error=<nil>\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n"
+    },
+    {
+      "record": "io-controls-v2-results.json",
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "control": {
+          "source": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+          "control_source": "383f164c3a4148ca34a13d902fd39752d00b3546",
+          "control": "terminal",
+          "overlay_sha256": "915b6904c546c050cc7666922a13248683d27c07344701f2d9561a6d1962f014",
+          "overlay_source_sha256": "71a187c98e1e8b3f76b77a19ba47401e86ac6f940a59a3fd8a106e71e78dcf8f",
+          "command": [
+            "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+            "build",
+            "-p=2",
+            "-trimpath",
+            "-overlay=/home/ubuntu/build/pea-evaluation-20261028/io-control-v2-terminal-overlay.json",
+            "-o",
+            "/home/ubuntu/build/pea-evaluation-20261028/tools/bin/bridge-probe-io-control-v2-terminal",
+            "/home/ubuntu/build/pea-evaluation-20261028/bridge_probe_v1.go"
+          ],
+          "exit_code": 0,
+          "probe_source_sha256": "156e36cdec497cdd933a50807cd28f0469d48e839062775cead30af42f2aa46d",
+          "binary_sha256": "4239f93072755068124ac8ec7783d80c7736007414fcde35841725904995c016"
+        },
+        "runtime": "runc",
+        "repeat": "io-control-v2-terminal-1",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runc-io-control-v2-terminal-1",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_io_control_v2_terminal.py",
+          "boot",
+          "runc",
+          "io-control-v2-terminal-1"
+        ],
+        "exit_code": 1,
+        "seconds": 2.0685078324750066,
+        "expected_rejection": false,
+        "independent_cleanup": true,
+        "matched": false,
+        "raw_sha256": "7c85c360c567ee86dd5477ecf1d03c38b1c0bbb23987992d02cf5de94e3a11ef"
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-control-v2-terminal-1/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-control-v2-terminal-1/child-init.c:33:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   33 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-control-v2-terminal-1/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-control-v2-terminal-1/child-init.c:8:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    8 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.064871329,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.007867139,\"step\":\"start-parent\"}\nIO_PASS tty=false output=\"IO_READY tty=0\\nIO_BYTES=131071 EOF=1\\n\" stderr=\"IO_STDERR\\n\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.262098169,\"step\":\"delayed-stdin-tty-false\"}\n{\"error\":\"1 error occurred:\\n\\t* failed to create shim task: OCI runtime create failed: runc create failed: cannot allocate tty if runc will detach without setting console socket\\n\\n\",\"seconds\":0.064967618,\"step\":\"delayed-stdin-tty-true\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000414917,\"step\":\"cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.022512228,\"step\":\"cleanup-delete-pea-parent\"}\nFIXTURE_PARENT_CGROUP_RELEASE path=/sys/fs/cgroup/system.slice/pea-eval-nerd-runc-io-control-v2-terminal-1.service/workloads/pea-parent procs=\"\" error=<nil>\n\nBRIDGE_FAIL 1 error occurred:\n\t* failed to create shim task: OCI runtime create failed: runc create failed: cannot allocate tty if runc will detach without setting console socket\n\n\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n"
+    },
+    {
+      "record": "io-controls-v3-results.json",
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "control": {
+          "source": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+          "control_source": "383f164c3a4148ca34a13d902fd39752d00b3546",
+          "control": "terminal",
+          "overlay_sha256": "945463310d03ede5ecacea3ec37fd6802420c5d79002f78ea9ac7f1a68f66b3b",
+          "overlay_source_sha256": "71a187c98e1e8b3f76b77a19ba47401e86ac6f940a59a3fd8a106e71e78dcf8f",
+          "command": [
+            "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+            "build",
+            "-p=2",
+            "-trimpath",
+            "-overlay=/home/ubuntu/build/pea-evaluation-20261028/io-control-v3-terminal-overlay.json",
+            "-o",
+            "/home/ubuntu/build/pea-evaluation-20261028/tools/bin/bridge-probe-io-control-v3-terminal",
+            "/home/ubuntu/build/pea-evaluation-20261028/bridge_probe_v1.go"
+          ],
+          "exit_code": 0,
+          "probe_source_sha256": "156e36cdec497cdd933a50807cd28f0469d48e839062775cead30af42f2aa46d",
+          "binary_sha256": "4239f93072755068124ac8ec7783d80c7736007414fcde35841725904995c016"
+        },
+        "runtime": "runc",
+        "repeat": "io-control-v3-terminal-1",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runc-io-control-v3-terminal-1",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_io_control_v3_terminal.py",
+          "boot",
+          "runc",
+          "io-control-v3-terminal-1"
+        ],
+        "exit_code": 1,
+        "seconds": 2.0183079103007913,
+        "expected_rejection": true,
+        "independent_cleanup": true,
+        "matched": true,
+        "raw_sha256": "23115ebedeec248dd96ffa5942caed87551c81d4da8d36b64dd80c3fce7a4c6e"
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-control-v3-terminal-1/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-control-v3-terminal-1/child-init.c:33:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   33 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-control-v3-terminal-1/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-control-v3-terminal-1/child-init.c:8:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    8 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.061990713,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.007536414,\"step\":\"start-parent\"}\nIO_PASS tty=false output=\"IO_READY tty=0\\nIO_BYTES=131071 EOF=1\\n\" stderr=\"IO_STDERR\\n\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.260178871,\"step\":\"delayed-stdin-tty-false\"}\n{\"error\":\"1 error occurred:\\n\\t* failed to create shim task: OCI runtime create failed: runc create failed: cannot allocate tty if runc will detach without setting console socket\\n\\n\",\"seconds\":0.062877073,\"step\":\"delayed-stdin-tty-true\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000577213,\"step\":\"cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.0221194,\"step\":\"cleanup-delete-pea-parent\"}\nFIXTURE_PARENT_CGROUP_RELEASE path=/sys/fs/cgroup/system.slice/pea-eval-nerd-runc-io-control-v3-terminal-1.service/workloads/pea-parent procs=\"\" error=<nil>\n\nBRIDGE_FAIL 1 error occurred:\n\t* failed to create shim task: OCI runtime create failed: runc create failed: cannot allocate tty if runc will detach without setting console socket\n\n\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n"
+    },
+    {
+      "record": "io-controls-v3-results.json",
+      "result": {
+        "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "control": {
+          "source": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+          "control_source": "383f164c3a4148ca34a13d902fd39752d00b3546",
+          "control": "terminal",
+          "overlay_sha256": "945463310d03ede5ecacea3ec37fd6802420c5d79002f78ea9ac7f1a68f66b3b",
+          "overlay_source_sha256": "71a187c98e1e8b3f76b77a19ba47401e86ac6f940a59a3fd8a106e71e78dcf8f",
+          "command": [
+            "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+            "build",
+            "-p=2",
+            "-trimpath",
+            "-overlay=/home/ubuntu/build/pea-evaluation-20261028/io-control-v3-terminal-overlay.json",
+            "-o",
+            "/home/ubuntu/build/pea-evaluation-20261028/tools/bin/bridge-probe-io-control-v3-terminal",
+            "/home/ubuntu/build/pea-evaluation-20261028/bridge_probe_v1.go"
+          ],
+          "exit_code": 0,
+          "probe_source_sha256": "156e36cdec497cdd933a50807cd28f0469d48e839062775cead30af42f2aa46d",
+          "binary_sha256": "4239f93072755068124ac8ec7783d80c7736007414fcde35841725904995c016"
+        },
+        "runtime": "runsc",
+        "repeat": "io-control-v3-terminal-1",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runsc-io-control-v3-terminal-1",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_io_control_v3_terminal.py",
+          "boot",
+          "runsc",
+          "io-control-v3-terminal-1"
+        ],
+        "exit_code": 1,
+        "seconds": 2.3188932286575437,
+        "expected_rejection": true,
+        "independent_cleanup": true,
+        "matched": true,
+        "raw_sha256": "1eb5587ff44f92e2c77258da79fe9ba5cec3f14548633f5c170d0852d13699d2"
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-control-v3-terminal-1/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-control-v3-terminal-1/child-init.c:33:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   33 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-control-v3-terminal-1/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-control-v3-terminal-1/child-init.c:8:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    8 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.099474755,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.057679539,\"step\":\"start-parent\"}\nIO_PASS tty=false output=\"IO_READY tty=0\\nIO_BYTES=131071 EOF=1\\n\" stderr=\"IO_STDERR\\n\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.334944957,\"step\":\"delayed-stdin-tty-false\"}\n{\"error\":\"1 error occurred:\\n\\t* OCI runtime start failed: starting container: starting sub-container [/bin/pea-probe]: terminal enabled but no TTY provided. Did you set --console-socket on create?\\n\\n\",\"seconds\":0.146829529,\"step\":\"delayed-stdin-tty-true\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000731997,\"step\":\"cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.091945457,\"step\":\"cleanup-delete-pea-parent\"}\nFIXTURE_PARENT_CGROUP_RELEASE path=/sys/fs/cgroup/system.slice/pea-eval-nerd-runsc-io-control-v3-terminal-1.service/workloads/pea-parent procs=\"\" error=<nil>\n\nBRIDGE_FAIL 1 error occurred:\n\t* OCI runtime start failed: starting container: starting sub-container [/bin/pea-probe]: terminal enabled but no TTY provided. Did you set --console-socket on create?\n\n\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n"
+    },
+    {
+      "record": "input-rpc-v1-results.json",
+      "result": {
+        "mode": "negative",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "test",
+          "-race",
+          "-p=2",
+          "-count=1",
+          "-timeout=20s",
+          "-overlay=/home/ubuntu/build/pea-evaluation-20261028/input-rpc-negative-v1-overlay.json",
+          "./rundmc/runcontainerd/nerd",
+          "-run=TestNerdPeaCloseIOFollowsInputCompletion",
+          "-v"
+        ],
+        "exit_code": 1,
+        "matched": false,
+        "raw_sha256": "fa8d511fb34b323dd602f08a06592859e41d82b300ca9898de67193cb0b5c67e",
+        "test_sha256": "987c3169916177869782c7d9aad4d1532feccc022bdfa5fdc545b0491702b55c"
+      },
+      "raw_output": "=== RUN   TestNerdPeaCloseIOFollowsInputCompletion\n  {\"timestamp\":\"1793167038.182469368\",\"source\":\"pea-input\",\"message\":\"pea-input.creating-container\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n    nerd_linux_test.go:163: unknown service containerd.services.leases.v1.Leases\n--- FAIL: TestNerdPeaCloseIOFollowsInputCompletion (0.01s)\nFAIL\nFAIL\tcode.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd\t0.044s\nFAIL\n"
+    },
+    {
+      "record": "input-rpc-v2-results.json",
+      "result": {
+        "mode": "negative",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "test",
+          "-race",
+          "-p=2",
+          "-count=1",
+          "-timeout=20s",
+          "-overlay=/home/ubuntu/build/pea-evaluation-20261028/input-rpc-negative-v2-overlay.json",
+          "./rundmc/runcontainerd/nerd",
+          "-run=TestNerdPeaCloseIOFollowsInputCompletion",
+          "-v"
+        ],
+        "exit_code": 1,
+        "matched": true,
+        "raw_sha256": "bfc2368848bfaa9ac43e9975e88c2e87bb53a2df0d24df1231c248d02db2d1e2",
+        "test_sha256": "fdf8040a05570b6dc8f26c7776abcdac96ed1b4d6b3cc601bf6e1583f3d3fad3"
+      },
+      "raw_output": "=== RUN   TestNerdPeaCloseIOFollowsInputCompletion\n  {\"timestamp\":\"1793167077.163389206\",\"source\":\"pea-input\",\"message\":\"pea-input.creating-container\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n  {\"timestamp\":\"1793167077.168709278\",\"source\":\"pea-input\",\"message\":\"pea-input.setting-label\",\"log_level\":0,\"data\":{\"containerID\":\"child\",\"label-key\":\"container-type\",\"label-value\":\"pea\"}}\n  {\"timestamp\":\"1793167077.169853926\",\"source\":\"pea-input\",\"message\":\"pea-input.setting-label\",\"log_level\":0,\"data\":{\"containerID\":\"child\",\"label-key\":\"sandbox-container\",\"label-value\":\"parent\"}}\n  {\"timestamp\":\"1793167077.170752287\",\"source\":\"pea-input\",\"message\":\"pea-input.setting-label\",\"log_level\":0,\"data\":{\"containerID\":\"child\",\"label-key\":\"io.kubernetes.cri.container-type\",\"label-value\":\"container\"}}\n  {\"timestamp\":\"1793167077.171610117\",\"source\":\"pea-input\",\"message\":\"pea-input.setting-label\",\"log_level\":0,\"data\":{\"containerID\":\"child\",\"label-key\":\"io.kubernetes.cri.sandbox-id\",\"label-value\":\"parent\"}}\n  {\"timestamp\":\"1793167077.172364473\",\"source\":\"pea-input\",\"message\":\"pea-input.creating-task\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n  {\"timestamp\":\"1793167077.187469482\",\"source\":\"pea-input\",\"message\":\"pea-input.loading-container\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n  {\"timestamp\":\"1793167077.188206911\",\"source\":\"pea-input\",\"message\":\"pea-input.loading-task\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n  {\"timestamp\":\"1793167077.190511942\",\"source\":\"pea-input\",\"message\":\"pea-input.starting-task\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n    nerd_linux_test.go:186: CloseIO preceded supplied stdin completion\n  {\"timestamp\":\"1793167077.192223787\",\"source\":\"pea-input\",\"message\":\"pea-input.loading-container\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n  {\"timestamp\":\"1793167077.192999363\",\"source\":\"pea-input\",\"message\":\"pea-input.loading-task\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n  {\"timestamp\":\"1793167077.193723202\",\"source\":\"pea-input\",\"message\":\"pea-input.deleting-task\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n--- FAIL: TestNerdPeaCloseIOFollowsInputCompletion (0.03s)\nFAIL\nFAIL\tcode.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd\t0.072s\nFAIL\n"
+    },
+    {
+      "record": "input-rpc-v2-results.json",
+      "result": {
+        "mode": "restored",
+        "command": [
+          "/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go",
+          "test",
+          "-race",
+          "-p=2",
+          "-count=1",
+          "-timeout=20s",
+          "-overlay=/home/ubuntu/build/pea-evaluation-20261028/input-rpc-restored-v2-overlay.json",
+          "./rundmc/runcontainerd/nerd",
+          "-run=TestNerdPeaCloseIOFollowsInputCompletion",
+          "-v"
+        ],
+        "exit_code": 0,
+        "matched": true,
+        "raw_sha256": "e3338164cef79604162811252ce609c37ef1a9de177cc00cc425c46e97060742",
+        "test_sha256": "fdf8040a05570b6dc8f26c7776abcdac96ed1b4d6b3cc601bf6e1583f3d3fad3"
+      },
+      "raw_output": "=== RUN   TestNerdPeaCloseIOFollowsInputCompletion\n  {\"timestamp\":\"1793167080.545326710\",\"source\":\"pea-input\",\"message\":\"pea-input.creating-container\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n  {\"timestamp\":\"1793167080.550902367\",\"source\":\"pea-input\",\"message\":\"pea-input.setting-label\",\"log_level\":0,\"data\":{\"containerID\":\"child\",\"label-key\":\"container-type\",\"label-value\":\"pea\"}}\n  {\"timestamp\":\"1793167080.552134752\",\"source\":\"pea-input\",\"message\":\"pea-input.setting-label\",\"log_level\":0,\"data\":{\"containerID\":\"child\",\"label-key\":\"sandbox-container\",\"label-value\":\"parent\"}}\n  {\"timestamp\":\"1793167080.552895308\",\"source\":\"pea-input\",\"message\":\"pea-input.setting-label\",\"log_level\":0,\"data\":{\"containerID\":\"child\",\"label-key\":\"io.kubernetes.cri.container-type\",\"label-value\":\"container\"}}\n  {\"timestamp\":\"1793167080.553812265\",\"source\":\"pea-input\",\"message\":\"pea-input.setting-label\",\"log_level\":0,\"data\":{\"containerID\":\"child\",\"label-key\":\"io.kubernetes.cri.sandbox-id\",\"label-value\":\"parent\"}}\n  {\"timestamp\":\"1793167080.554725170\",\"source\":\"pea-input\",\"message\":\"pea-input.creating-task\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n  {\"timestamp\":\"1793167080.569949150\",\"source\":\"pea-input\",\"message\":\"pea-input.loading-container\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n  {\"timestamp\":\"1793167080.570944309\",\"source\":\"pea-input\",\"message\":\"pea-input.loading-task\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n  {\"timestamp\":\"1793167080.572615623\",\"source\":\"pea-input\",\"message\":\"pea-input.starting-task\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n  {\"timestamp\":\"1793167080.624525070\",\"source\":\"pea-input\",\"message\":\"pea-input.loading-container\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n  {\"timestamp\":\"1793167080.625345707\",\"source\":\"pea-input\",\"message\":\"pea-input.loading-task\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n  {\"timestamp\":\"1793167080.626074076\",\"source\":\"pea-input\",\"message\":\"pea-input.deleting-task\",\"log_level\":0,\"data\":{\"containerID\":\"child\"}}\n--- PASS: TestNerdPeaCloseIOFollowsInputCompletion (0.08s)\nPASS\nok  \tcode.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd\t1.122s\n"
+    }
+  ],
+  "matrices": [
+    {
+      "matrix": "grootfs-io-lifecycle-v3.json",
+      "result": {
+        "runtime": "runc",
+        "repeat": "io-v3-1",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runc-io-v3-1",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_io_v3.py",
+          "boot",
+          "runc",
+          "io-v3-1"
+        ],
+        "exit_code": 0,
+        "seconds": 2.168064769357443,
+        "raw_sha256": "157503f6254861df0a5a24dd0f6b1166e2673cfbb284d41b911bc487a3182c61"
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-v3-1/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-v3-1/child-init.c:33:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   33 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-v3-1/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-v3-1/child-init.c:8:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    8 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.061385954,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.007695403,\"step\":\"start-parent\"}\nIO_PASS tty=false output=\"IO_READY tty=0\\nIO_BYTES=131071 EOF=1\\n\" stderr=\"IO_STDERR\\n\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.255818943,\"step\":\"delayed-stdin-tty-false\"}\nIO_PASS tty=true output=\"IO_READY tty=1\\r\\ndelayed-input\\r\\nIO_STDERR\\r\\nIO_BYTES=14 NEWLINE=1\\r\\n\" stderr=\"\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.219625869,\"step\":\"delayed-stdin-tty-true\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000274562,\"step\":\"cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.022840634,\"step\":\"cleanup-delete-pea-parent\"}\nFIXTURE_PARENT_CGROUP_RELEASE path=/sys/fs/cgroup/system.slice/pea-eval-nerd-runc-io-v3-1.service/workloads/pea-parent procs=\"\" error=<nil>\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "ce5c33b149428eada6b5fe911bd609e97d7476b541aba1df69b309645d4a40d3",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-io-lifecycle-v3.json",
+      "result": {
+        "runtime": "runc",
+        "repeat": "io-v3-2",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runc-io-v3-2",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_io_v3.py",
+          "boot",
+          "runc",
+          "io-v3-2"
+        ],
+        "exit_code": 0,
+        "seconds": 2.167780372314155,
+        "raw_sha256": "6eb9538cc6f54d85ba5837fd9fb27835e1bc10d3d925917669bb87f9df50244c"
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-v3-2/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-v3-2/child-init.c:33:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   33 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-v3-2/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-v3-2/child-init.c:8:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    8 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.068185792,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.007038261,\"step\":\"start-parent\"}\nIO_PASS tty=false output=\"IO_READY tty=0\\nIO_BYTES=131071 EOF=1\\n\" stderr=\"IO_STDERR\\n\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.263879325,\"step\":\"delayed-stdin-tty-false\"}\nIO_PASS tty=true output=\"IO_READY tty=1\\r\\ndelayed-input\\r\\nIO_STDERR\\r\\nIO_BYTES=14 NEWLINE=1\\r\\n\" stderr=\"\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.221924829,\"step\":\"delayed-stdin-tty-true\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000281267,\"step\":\"cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.021445225,\"step\":\"cleanup-delete-pea-parent\"}\nFIXTURE_PARENT_CGROUP_RELEASE path=/sys/fs/cgroup/system.slice/pea-eval-nerd-runc-io-v3-2.service/workloads/pea-parent procs=\"\" error=<nil>\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "068f38638f99c0a0b75740c982ff70ae3dd79a21ee78cb2c3a10ddf8e3eb4299",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-io-lifecycle-v3.json",
+      "result": {
+        "runtime": "runc",
+        "repeat": "io-v3-3",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runc-io-v3-3",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_io_v3.py",
+          "boot",
+          "runc",
+          "io-v3-3"
+        ],
+        "exit_code": 0,
+        "seconds": 2.1680711023509502,
+        "raw_sha256": "f2170db17e9cabe3cfaec51a203453f55dd6d725b4dd661e5b8b9ddfe643529e"
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-v3-3/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-v3-3/child-init.c:33:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   33 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-v3-3/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-io-v3-3/child-init.c:8:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    8 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.067353172,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.007242728,\"step\":\"start-parent\"}\nIO_PASS tty=false output=\"IO_READY tty=0\\nIO_BYTES=131071 EOF=1\\n\" stderr=\"IO_STDERR\\n\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.26004517,\"step\":\"delayed-stdin-tty-false\"}\nIO_PASS tty=true output=\"IO_READY tty=1\\r\\ndelayed-input\\r\\nIO_STDERR\\r\\nIO_BYTES=14 NEWLINE=1\\r\\n\" stderr=\"\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.218766668,\"step\":\"delayed-stdin-tty-true\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000289382,\"step\":\"cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.021572082,\"step\":\"cleanup-delete-pea-parent\"}\nFIXTURE_PARENT_CGROUP_RELEASE path=/sys/fs/cgroup/system.slice/pea-eval-nerd-runc-io-v3-3.service/workloads/pea-parent procs=\"\" error=<nil>\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "48bbf25e6e8c6c66aa4393d91f158b4a02c523342556dccb3397421fac0eb43a",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-io-lifecycle-v3.json",
+      "result": {
+        "runtime": "runsc",
+        "repeat": "io-v3-1",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runsc-io-v3-1",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_io_v3.py",
+          "boot",
+          "runsc",
+          "io-v3-1"
+        ],
+        "exit_code": 0,
+        "seconds": 2.5188626488670707,
+        "raw_sha256": "5f99bb9441726fbd0566d575c7f71c0ee3a60657eb9d688fd3215f67bbe25002"
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-v3-1/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-v3-1/child-init.c:33:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   33 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-v3-1/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-v3-1/child-init.c:8:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    8 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.10592867,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.055720003,\"step\":\"start-parent\"}\nIO_PASS tty=false output=\"IO_READY tty=0\\nIO_BYTES=131071 EOF=1\\n\" stderr=\"IO_STDERR\\n\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.347719541,\"step\":\"delayed-stdin-tty-false\"}\nIO_PASS tty=true output=\"IO_READY tty=1\\r\\ndelayed-input\\r\\nIO_STDERR\\r\\nIO_BYTES=14 NEWLINE=1\\r\\n\" stderr=\"\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.309026238,\"step\":\"delayed-stdin-tty-true\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000384597,\"step\":\"cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.090811434,\"step\":\"cleanup-delete-pea-parent\"}\nFIXTURE_PARENT_CGROUP_RELEASE path=/sys/fs/cgroup/system.slice/pea-eval-nerd-runsc-io-v3-1.service/workloads/pea-parent procs=\"\" error=<nil>\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "8c49529d0ff20334959cdaf39f9263380e4a735c7cccad45039ea5a763c495f7",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-io-lifecycle-v3.json",
+      "result": {
+        "runtime": "runsc",
+        "repeat": "io-v3-2",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runsc-io-v3-2",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_io_v3.py",
+          "boot",
+          "runsc",
+          "io-v3-2"
+        ],
+        "exit_code": 0,
+        "seconds": 2.468126442283392,
+        "raw_sha256": "45cc0a799865aaabec648ed3f01c27a8a1ab4725f5a8cf7916855d2c1ca80db6"
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-v3-2/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-v3-2/child-init.c:33:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   33 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-v3-2/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-v3-2/child-init.c:8:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    8 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.098460359,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.055495326,\"step\":\"start-parent\"}\nIO_PASS tty=false output=\"IO_READY tty=0\\nIO_BYTES=131071 EOF=1\\n\" stderr=\"IO_STDERR\\n\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.333709924,\"step\":\"delayed-stdin-tty-false\"}\nIO_PASS tty=true output=\"IO_READY tty=1\\r\\ndelayed-input\\r\\nIO_STDERR\\r\\nIO_BYTES=14 NEWLINE=1\\r\\n\" stderr=\"\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.304502687,\"step\":\"delayed-stdin-tty-true\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000417575,\"step\":\"cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.095212742,\"step\":\"cleanup-delete-pea-parent\"}\nFIXTURE_PARENT_CGROUP_RELEASE path=/sys/fs/cgroup/system.slice/pea-eval-nerd-runsc-io-v3-2.service/workloads/pea-parent procs=\"\" error=<nil>\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "57617b33cd430f699095c78c2464991d9780a859fc1b92ca4788232fe314de43",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-io-lifecycle-v3.json",
+      "result": {
+        "runtime": "runsc",
+        "repeat": "io-v3-3",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runsc-io-v3-3",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_io_v3.py",
+          "boot",
+          "runsc",
+          "io-v3-3"
+        ],
+        "exit_code": 0,
+        "seconds": 2.5186818754300475,
+        "raw_sha256": "1d0974ba7f2ff1840622337c734c5d496041569c3f08c3d084ca53dcad843ac5"
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-v3-3/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-v3-3/child-init.c:33:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   33 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-v3-3/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-io-v3-3/child-init.c:8:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    8 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.105922232,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.05746219,\"step\":\"start-parent\"}\nIO_PASS tty=false output=\"IO_READY tty=0\\nIO_BYTES=131071 EOF=1\\n\" stderr=\"IO_STDERR\\n\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.340664726,\"step\":\"delayed-stdin-tty-false\"}\nIO_PASS tty=true output=\"IO_READY tty=1\\r\\ndelayed-input\\r\\nIO_STDERR\\r\\nIO_BYTES=14 NEWLINE=1\\r\\n\" stderr=\"\"\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.305714394,\"step\":\"delayed-stdin-tty-true\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000378568,\"step\":\"cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.094902335,\"step\":\"cleanup-delete-pea-parent\"}\nFIXTURE_PARENT_CGROUP_RELEASE path=/sys/fs/cgroup/system.slice/pea-eval-nerd-runsc-io-v3-3.service/workloads/pea-parent procs=\"\" error=<nil>\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "b815e6316145cd49f7cccf67f959668c83196418cd2385759870d324998d8c91",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-restart-lifecycle-v5.json",
+      "result": {
+        "runtime": "runc",
+        "repeat": "restart-v5-1",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runc-restart-v5-1",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_restart_v5.py",
+          "boot",
+          "runc",
+          "restart-v5-1"
+        ],
+        "exit_code": 0,
+        "seconds": 2.017848150804639,
+        "raw_sha256": "819cdcbf75fd71b539ff9f19f9e0a01fcc1e9ad0f54b1e980dc402bdedc8475d",
+        "candidate_identity_confirmed": true
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-restart-v5-1/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-restart-v5-1/child-init.c:14:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   14 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-restart-v5-1/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-restart-v5-1/child-init.c:7:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    7 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.073142942,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.007402112,\"step\":\"start-parent\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.051157927,\"step\":\"missing-child-user-negative\"}\nFAILED_START process=<nil> error=1 error occurred:\n\t* failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: \"/bin/missing-pea-executable\": stat /bin/missing-pea-executable: no such file or directory\n\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.086671583,\"step\":\"failed-child-Start-owned-rollback\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.062586872,\"step\":\"Containerizer-CreatePea-RunPea-internal-Start\"}\nCHILD_INIT PARENT_HTTP_SENTINEL\nBRIDGE_CHILD_READY pid=13 uid=1234 gid=1234 group5678=1 bind=CHILD_BIND_SENTINEL\nBRIDGE_GROUP parent=108 child=256 annotations=map[container-type:pea sandbox-container:pea-parent]\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.022303666,\"step\":\"child-image-user-bind-loopback-and-group\"}\nRESTART_LAUNCH_READY parent-and-child-running; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.002645964,\"step\":\"new-client-reattach-two-callers\"}\nRESTART_WAIT caller=0 code=42 error=<nil>\nRESTART_WAIT caller=1 code=42 error=<nil>\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.052633233,\"step\":\"restarted-Attach-TERM-concurrent-Wait-cleaner\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000270074,\"step\":\"restart-cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.020198397,\"step\":\"restart-cleanup-delete-pea-parent\"}\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "d1c5a658e8fec4219e74fb69a7e3cf43ca34e4e40a0f8e83a36a19547ad9641c",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-restart-lifecycle-v5.json",
+      "result": {
+        "runtime": "runc",
+        "repeat": "restart-v5-2",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runc-restart-v5-2",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_restart_v5.py",
+          "boot",
+          "runc",
+          "restart-v5-2"
+        ],
+        "exit_code": 0,
+        "seconds": 2.068217913620174,
+        "raw_sha256": "bed74ab68d9738b58654e478b5c16d228ef2b9978c7d8675512db1741a022bed",
+        "candidate_identity_confirmed": true
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-restart-v5-2/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-restart-v5-2/child-init.c:14:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   14 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-restart-v5-2/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-restart-v5-2/child-init.c:7:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    7 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.076354693,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.007504665,\"step\":\"start-parent\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.052925219,\"step\":\"missing-child-user-negative\"}\nFAILED_START process=<nil> error=1 error occurred:\n\t* failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: \"/bin/missing-pea-executable\": stat /bin/missing-pea-executable: no such file or directory\n\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.084974954,\"step\":\"failed-child-Start-owned-rollback\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.07048445,\"step\":\"Containerizer-CreatePea-RunPea-internal-Start\"}\nCHILD_INIT PARENT_HTTP_SENTINEL\nBRIDGE_CHILD_READY pid=13 uid=1234 gid=1234 group5678=1 bind=CHILD_BIND_SENTINEL\nBRIDGE_GROUP parent=107 child=257 annotations=map[container-type:pea sandbox-container:pea-parent]\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.023838354,\"step\":\"child-image-user-bind-loopback-and-group\"}\nRESTART_LAUNCH_READY parent-and-child-running; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.002297594,\"step\":\"new-client-reattach-two-callers\"}\nRESTART_WAIT caller=0 code=42 error=<nil>\nRESTART_WAIT caller=1 code=42 error=<nil>\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.055952535,\"step\":\"restarted-Attach-TERM-concurrent-Wait-cleaner\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000297341,\"step\":\"restart-cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.020874739,\"step\":\"restart-cleanup-delete-pea-parent\"}\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "bf258843a7349787ddfcb1b1a49b5caf75446ded532ff4ee691af919b6218db7",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-restart-lifecycle-v5.json",
+      "result": {
+        "runtime": "runc",
+        "repeat": "restart-v5-3",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runc-restart-v5-3",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_restart_v5.py",
+          "boot",
+          "runc",
+          "restart-v5-3"
+        ],
+        "exit_code": 0,
+        "seconds": 2.06804046779871,
+        "raw_sha256": "78ff1543d401c6927cbda5e3cfbaf1c69cf5d2c5b34f7a287e9da77a12ba1633",
+        "candidate_identity_confirmed": true
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-restart-v5-3/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-restart-v5-3/child-init.c:14:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   14 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-restart-v5-3/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-restart-v5-3/child-init.c:7:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    7 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.078364804,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.007609962,\"step\":\"start-parent\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.049011461,\"step\":\"missing-child-user-negative\"}\nFAILED_START process=<nil> error=1 error occurred:\n\t* failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: \"/bin/missing-pea-executable\": stat /bin/missing-pea-executable: no such file or directory\n\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.088669269,\"step\":\"failed-child-Start-owned-rollback\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.064291828,\"step\":\"Containerizer-CreatePea-RunPea-internal-Start\"}\nCHILD_INIT PARENT_HTTP_SENTINEL\nBRIDGE_CHILD_READY pid=13 uid=1234 gid=1234 group5678=1 bind=CHILD_BIND_SENTINEL\nBRIDGE_GROUP parent=106 child=256 annotations=map[container-type:pea sandbox-container:pea-parent]\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.023319101,\"step\":\"child-image-user-bind-loopback-and-group\"}\nRESTART_LAUNCH_READY parent-and-child-running; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.002903478,\"step\":\"new-client-reattach-two-callers\"}\nRESTART_WAIT caller=0 code=42 error=<nil>\nRESTART_WAIT caller=1 code=42 error=<nil>\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.054060663,\"step\":\"restarted-Attach-TERM-concurrent-Wait-cleaner\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000273186,\"step\":\"restart-cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.021631572,\"step\":\"restart-cleanup-delete-pea-parent\"}\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "e26428bfb442c01587cb04c0ba176e5dacea07067a1979a82c4302d41c099b58",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-restart-lifecycle-v5.json",
+      "result": {
+        "runtime": "runsc",
+        "repeat": "restart-v5-1",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runsc-restart-v5-1",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_restart_v5.py",
+          "boot",
+          "runsc",
+          "restart-v5-1"
+        ],
+        "exit_code": 0,
+        "seconds": 2.5191911067813635,
+        "raw_sha256": "a5656456999610021e793b07aa5ee8d141ca20461c7a5c98144c3734af6e44de",
+        "candidate_identity_confirmed": true
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-restart-v5-1/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-restart-v5-1/child-init.c:14:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   14 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-restart-v5-1/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-restart-v5-1/child-init.c:7:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    7 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.105956224,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.055087565,\"step\":\"start-parent\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.056305048,\"step\":\"missing-child-user-negative\"}\nFAILED_START process=<nil> error=1 error occurred:\n\t* OCI runtime start failed: starting container: starting sub-container [/bin/missing-pea-executable]: creating process: failed to load /bin/missing-pea-executable: no such file or directory\n\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.196296127,\"step\":\"failed-child-Start-owned-rollback\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.11918438,\"step\":\"Containerizer-CreatePea-RunPea-internal-Start\"}\nCHILD_INIT PARENT_HTTP_SENTINEL\nBRIDGE_CHILD_READY pid=2 uid=1234 gid=1234 group5678=1 bind=CHILD_BIND_SENTINEL\nBRIDGE_GROUP parent=105 child=105 annotations=map[container-type:pea io.kubernetes.cri.container-type:container io.kubernetes.cri.sandbox-id:pea-parent sandbox-container:pea-parent]\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.043515887,\"step\":\"child-image-user-bind-loopback-and-group\"}\nRESTART_LAUNCH_READY parent-and-child-running; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.013277028,\"step\":\"new-client-reattach-two-callers\"}\nRESTART_WAIT caller=0 code=42 error=<nil>\nRESTART_WAIT caller=1 code=42 error=<nil>\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.112534268,\"step\":\"restarted-Attach-TERM-concurrent-Wait-cleaner\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000300616,\"step\":\"restart-cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.088251795,\"step\":\"restart-cleanup-delete-pea-parent\"}\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "b7fb3787e43c57a585dabefea76510f9f63200a9a7536d2e1c5a8657fb1213ee",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-restart-lifecycle-v5.json",
+      "result": {
+        "runtime": "runsc",
+        "repeat": "restart-v5-2",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runsc-restart-v5-2",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_restart_v5.py",
+          "boot",
+          "runsc",
+          "restart-v5-2"
+        ],
+        "exit_code": 0,
+        "seconds": 2.51915992051363,
+        "raw_sha256": "80640d8399c4fdcae99801304c4fe57987a49f5cabb662f1816d6bcb345cd40a",
+        "candidate_identity_confirmed": true
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-restart-v5-2/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-restart-v5-2/child-init.c:14:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   14 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-restart-v5-2/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-restart-v5-2/child-init.c:7:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    7 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.111854739,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.056058522,\"step\":\"start-parent\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.058529185,\"step\":\"missing-child-user-negative\"}\nFAILED_START process=<nil> error=1 error occurred:\n\t* OCI runtime start failed: starting container: starting sub-container [/bin/missing-pea-executable]: creating process: failed to load /bin/missing-pea-executable: no such file or directory\n\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.192107656,\"step\":\"failed-child-Start-owned-rollback\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.129942197,\"step\":\"Containerizer-CreatePea-RunPea-internal-Start\"}\nCHILD_INIT PARENT_HTTP_SENTINEL\nBRIDGE_CHILD_READY pid=2 uid=1234 gid=1234 group5678=1 bind=CHILD_BIND_SENTINEL\nBRIDGE_GROUP parent=106 child=106 annotations=map[container-type:pea io.kubernetes.cri.container-type:container io.kubernetes.cri.sandbox-id:pea-parent sandbox-container:pea-parent]\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.020799923,\"step\":\"child-image-user-bind-loopback-and-group\"}\nRESTART_LAUNCH_READY parent-and-child-running; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.012727775,\"step\":\"new-client-reattach-two-callers\"}\nRESTART_WAIT caller=0 code=42 error=<nil>\nRESTART_WAIT caller=1 code=42 error=<nil>\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.120039098,\"step\":\"restarted-Attach-TERM-concurrent-Wait-cleaner\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000321081,\"step\":\"restart-cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.092402114,\"step\":\"restart-cleanup-delete-pea-parent\"}\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "aa9b70215e0b306d7269a2f30f8d432f32b069c9f9c56c23b929145557f613e9",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-restart-lifecycle-v5.json",
+      "result": {
+        "runtime": "runsc",
+        "repeat": "restart-v5-3",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runsc-restart-v5-3",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_restart_v5.py",
+          "boot",
+          "runsc",
+          "restart-v5-3"
+        ],
+        "exit_code": 0,
+        "seconds": 2.518984897993505,
+        "raw_sha256": "63efc1d2d1cac71046ad743ddc965fcf63dafa9d243ecd02bb1b42a90122673a",
+        "candidate_identity_confirmed": true
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-restart-v5-3/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-restart-v5-3/child-init.c:14:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   14 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-restart-v5-3/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-restart-v5-3/child-init.c:7:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    7 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.116822922,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.054813139,\"step\":\"start-parent\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.057205228,\"step\":\"missing-child-user-negative\"}\nFAILED_START process=<nil> error=1 error occurred:\n\t* OCI runtime start failed: starting container: starting sub-container [/bin/missing-pea-executable]: creating process: failed to load /bin/missing-pea-executable: no such file or directory\n\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.185433163,\"step\":\"failed-child-Start-owned-rollback\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.121816738,\"step\":\"Containerizer-CreatePea-RunPea-internal-Start\"}\nCHILD_INIT PARENT_HTTP_SENTINEL\nBRIDGE_CHILD_READY pid=2 uid=1234 gid=1234 group5678=1 bind=CHILD_BIND_SENTINEL\nBRIDGE_GROUP parent=107 child=107 annotations=map[container-type:pea io.kubernetes.cri.container-type:container io.kubernetes.cri.sandbox-id:pea-parent sandbox-container:pea-parent]\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.040914008,\"step\":\"child-image-user-bind-loopback-and-group\"}\nRESTART_LAUNCH_READY parent-and-child-running; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.012663199,\"step\":\"new-client-reattach-two-callers\"}\nRESTART_WAIT caller=0 code=42 error=<nil>\nRESTART_WAIT caller=1 code=42 error=<nil>\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.112169153,\"step\":\"restarted-Attach-TERM-concurrent-Wait-cleaner\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000349967,\"step\":\"restart-cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.100017672,\"step\":\"restart-cleanup-delete-pea-parent\"}\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "2cd7c159ff1eb4f4dffdbefc2f28b7e8ca81e86c94909ebd85f8b6df521bc3ca",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-orphan-lifecycle-v4.json",
+      "result": {
+        "runtime": "runc",
+        "repeat": "orphan-v4-1",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runc-orphan-v4-1",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_orphan_v4.py",
+          "boot",
+          "runc",
+          "orphan-v4-1"
+        ],
+        "exit_code": 0,
+        "seconds": 2.1181197464466095,
+        "raw_sha256": "0d036b6ccd4479b89cbd5fb483dd6b038d38a445460e689bb7192e4fcc8e14a5",
+        "candidate_identity_confirmed": true
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-orphan-v4-1/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-orphan-v4-1/child-init.c:14:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   14 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-orphan-v4-1/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-orphan-v4-1/child-init.c:7:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    7 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.067159344,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.007640585,\"step\":\"start-parent\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.051649224,\"step\":\"missing-child-user-negative\"}\nFAILED_START process=<nil> error=1 error occurred:\n\t* failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: \"/bin/missing-pea-executable\": stat /bin/missing-pea-executable: no such file or directory\n\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.090990217,\"step\":\"failed-child-Start-owned-rollback\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.066452837,\"step\":\"Containerizer-CreatePea-RunPea-internal-Start\"}\nCHILD_INIT PARENT_HTTP_SENTINEL\nBRIDGE_CHILD_READY pid=13 uid=1234 gid=1234 group5678=1 bind=CHILD_BIND_SENTINEL\nBRIDGE_GROUP parent=109 child=257 annotations=map[container-type:pea sandbox-container:pea-parent]\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.023222347,\"step\":\"child-image-user-bind-loopback-and-group\"}\nRESTART_LAUNCH_READY parent-and-child-running; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.002459528,\"step\":\"new-client-reattach-two-callers\"}\nRESTART_WAIT caller=0 code=0 error=injected image deletion failure\nRESTART_WAIT caller=1 code=0 error=injected image deletion failure\nORPHAN_READY image-and-metadata-retained; child-task-absent; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.022585167,\"step\":\"new-client-missing-task-orphan-cleanup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000285841,\"step\":\"restart-cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.022418739,\"step\":\"restart-cleanup-delete-pea-parent\"}\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "495c82a1eee104e2180bb3485ef83c5e4e8559d16decd8891752064e441221f1",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-orphan-lifecycle-v4.json",
+      "result": {
+        "runtime": "runc",
+        "repeat": "orphan-v4-2",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runc-orphan-v4-2",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_orphan_v4.py",
+          "boot",
+          "runc",
+          "orphan-v4-2"
+        ],
+        "exit_code": 0,
+        "seconds": 2.0681541273370385,
+        "raw_sha256": "82b4a8220144eb7c43549d005e4770ba21a8c6d9fef43464ea9e527fb0a42f81",
+        "candidate_identity_confirmed": true
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-orphan-v4-2/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-orphan-v4-2/child-init.c:14:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   14 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-orphan-v4-2/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-orphan-v4-2/child-init.c:7:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    7 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.058955363,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.007451653,\"step\":\"start-parent\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.047676443,\"step\":\"missing-child-user-negative\"}\nFAILED_START process=<nil> error=1 error occurred:\n\t* failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: \"/bin/missing-pea-executable\": stat /bin/missing-pea-executable: no such file or directory\n\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.08779016,\"step\":\"failed-child-Start-owned-rollback\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.071996256,\"step\":\"Containerizer-CreatePea-RunPea-internal-Start\"}\nCHILD_INIT PARENT_HTTP_SENTINEL\nBRIDGE_CHILD_READY pid=13 uid=1234 gid=1234 group5678=1 bind=CHILD_BIND_SENTINEL\nBRIDGE_GROUP parent=106 child=257 annotations=map[container-type:pea sandbox-container:pea-parent]\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.023483254,\"step\":\"child-image-user-bind-loopback-and-group\"}\nRESTART_LAUNCH_READY parent-and-child-running; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.002468288,\"step\":\"new-client-reattach-two-callers\"}\nRESTART_WAIT caller=0 code=0 error=injected image deletion failure\nRESTART_WAIT caller=1 code=0 error=injected image deletion failure\nORPHAN_READY image-and-metadata-retained; child-task-absent; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.022844753,\"step\":\"new-client-missing-task-orphan-cleanup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000253951,\"step\":\"restart-cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.021679028,\"step\":\"restart-cleanup-delete-pea-parent\"}\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "a770615a0008e43bcd8e4f5f79ba9f618ad9dfe7a6496984a40612e27620253a",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-orphan-lifecycle-v4.json",
+      "result": {
+        "runtime": "runc",
+        "repeat": "orphan-v4-3",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runc-orphan-v4-3",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_orphan_v4.py",
+          "boot",
+          "runc",
+          "orphan-v4-3"
+        ],
+        "exit_code": 0,
+        "seconds": 2.0685876477509737,
+        "raw_sha256": "34e10bf78f392fac5f84baac1ccb42c0b65fe26f3b0973b5bd172fa319953d3c",
+        "candidate_identity_confirmed": true
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-orphan-v4-3/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-orphan-v4-3/child-init.c:14:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   14 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-orphan-v4-3/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runc-orphan-v4-3/child-init.c:7:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    7 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.064622363,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.007398506,\"step\":\"start-parent\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.046986929,\"step\":\"missing-child-user-negative\"}\nFAILED_START process=<nil> error=1 error occurred:\n\t* failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: \"/bin/missing-pea-executable\": stat /bin/missing-pea-executable: no such file or directory\n\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.086965567,\"step\":\"failed-child-Start-owned-rollback\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.075870047,\"step\":\"Containerizer-CreatePea-RunPea-internal-Start\"}\nCHILD_INIT PARENT_HTTP_SENTINEL\nBRIDGE_CHILD_READY pid=13 uid=1234 gid=1234 group5678=1 bind=CHILD_BIND_SENTINEL\nBRIDGE_GROUP parent=108 child=256 annotations=map[container-type:pea sandbox-container:pea-parent]\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.023492704,\"step\":\"child-image-user-bind-loopback-and-group\"}\nRESTART_LAUNCH_READY parent-and-child-running; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.003401181,\"step\":\"new-client-reattach-two-callers\"}\nRESTART_WAIT caller=0 code=0 error=injected image deletion failure\nRESTART_WAIT caller=1 code=0 error=injected image deletion failure\nORPHAN_READY image-and-metadata-retained; child-task-absent; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.022366461,\"step\":\"new-client-missing-task-orphan-cleanup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000238435,\"step\":\"restart-cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.021301684,\"step\":\"restart-cleanup-delete-pea-parent\"}\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "e989c3efd49a52c55d4583136193de9b1d6d3938cf897fd06fc7fb3ffd52d560",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-orphan-lifecycle-v4.json",
+      "result": {
+        "runtime": "runsc",
+        "repeat": "orphan-v4-1",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runsc-orphan-v4-1",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_orphan_v4.py",
+          "boot",
+          "runsc",
+          "orphan-v4-1"
+        ],
+        "exit_code": 0,
+        "seconds": 2.5189340775832534,
+        "raw_sha256": "0b3e49cf7ea6cf6128442dfdd1097dc49076f28d5f26ee20af8e44dba71c5d71",
+        "candidate_identity_confirmed": true
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-orphan-v4-1/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-orphan-v4-1/child-init.c:14:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   14 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-orphan-v4-1/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-orphan-v4-1/child-init.c:7:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    7 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.106638276,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.056173013,\"step\":\"start-parent\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.058125256,\"step\":\"missing-child-user-negative\"}\nFAILED_START process=<nil> error=1 error occurred:\n\t* OCI runtime start failed: starting container: starting sub-container [/bin/missing-pea-executable]: creating process: failed to load /bin/missing-pea-executable: no such file or directory\n\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.185326697,\"step\":\"failed-child-Start-owned-rollback\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.115753928,\"step\":\"Containerizer-CreatePea-RunPea-internal-Start\"}\nCHILD_INIT PARENT_HTTP_SENTINEL\nBRIDGE_CHILD_READY pid=2 uid=1234 gid=1234 group5678=1 bind=CHILD_BIND_SENTINEL\nBRIDGE_GROUP parent=105 child=105 annotations=map[container-type:pea io.kubernetes.cri.container-type:container io.kubernetes.cri.sandbox-id:pea-parent sandbox-container:pea-parent]\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.040352123,\"step\":\"child-image-user-bind-loopback-and-group\"}\nRESTART_LAUNCH_READY parent-and-child-running; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.013103654,\"step\":\"new-client-reattach-two-callers\"}\nRESTART_WAIT caller=0 code=0 error=injected image deletion failure\nRESTART_WAIT caller=1 code=0 error=injected image deletion failure\nORPHAN_READY image-and-metadata-retained; child-task-absent; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.052733247,\"step\":\"new-client-missing-task-orphan-cleanup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000267099,\"step\":\"restart-cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.093965973,\"step\":\"restart-cleanup-delete-pea-parent\"}\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "4b6372f6a5c3cc2c69904f6f5fef96b68862ac5d039767a25fdae827629d6a13",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-orphan-lifecycle-v4.json",
+      "result": {
+        "runtime": "runsc",
+        "repeat": "orphan-v4-2",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runsc-orphan-v4-2",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_orphan_v4.py",
+          "boot",
+          "runsc",
+          "orphan-v4-2"
+        ],
+        "exit_code": 0,
+        "seconds": 2.468936384655535,
+        "raw_sha256": "a7694663d5f2798183e7235af4cc0f9198bb79502c61a3b20e0a35b0deb70df3",
+        "candidate_identity_confirmed": true
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-orphan-v4-2/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-orphan-v4-2/child-init.c:14:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   14 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-orphan-v4-2/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-orphan-v4-2/child-init.c:7:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    7 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.09701733,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.056706523,\"step\":\"start-parent\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.056804382,\"step\":\"missing-child-user-negative\"}\nFAILED_START process=<nil> error=1 error occurred:\n\t* OCI runtime start failed: starting container: starting sub-container [/bin/missing-pea-executable]: creating process: failed to load /bin/missing-pea-executable: no such file or directory\n\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.185392905,\"step\":\"failed-child-Start-owned-rollback\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.114074177,\"step\":\"Containerizer-CreatePea-RunPea-internal-Start\"}\nCHILD_INIT PARENT_HTTP_SENTINEL\nBRIDGE_CHILD_READY pid=2 uid=1234 gid=1234 group5678=1 bind=CHILD_BIND_SENTINEL\nBRIDGE_GROUP parent=107 child=107 annotations=map[container-type:pea io.kubernetes.cri.container-type:container io.kubernetes.cri.sandbox-id:pea-parent sandbox-container:pea-parent]\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.042222021,\"step\":\"child-image-user-bind-loopback-and-group\"}\nRESTART_LAUNCH_READY parent-and-child-running; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.013563607,\"step\":\"new-client-reattach-two-callers\"}\nRESTART_WAIT caller=0 code=0 error=injected image deletion failure\nRESTART_WAIT caller=1 code=0 error=injected image deletion failure\nORPHAN_READY image-and-metadata-retained; child-task-absent; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.041201098,\"step\":\"new-client-missing-task-orphan-cleanup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000391221,\"step\":\"restart-cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.087960661,\"step\":\"restart-cleanup-delete-pea-parent\"}\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "7207aec65cb307573a15613739165fb994608217d7002e600c6a83d2a3d96f43",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    },
+    {
+      "matrix": "grootfs-orphan-lifecycle-v4.json",
+      "result": {
+        "runtime": "runsc",
+        "repeat": "orphan-v4-3",
+        "command": [
+          "sudo",
+          "-n",
+          "systemd-run",
+          "--unit=pea-eval-nerd-runsc-orphan-v4-3",
+          "--quiet",
+          "--wait",
+          "--pipe",
+          "--collect",
+          "--property=Delegate=yes",
+          "--property=MemoryMax=8G",
+          "--property=CPUQuota=200%",
+          "--property=TasksMax=1024",
+          "--property=RuntimeMaxSec=210",
+          "python3",
+          "/home/ubuntu/build/pea-evaluation-20261028/nerd_namespace_orphan_v4.py",
+          "boot",
+          "runsc",
+          "orphan-v4-3"
+        ],
+        "exit_code": 0,
+        "seconds": 2.4689158461987972,
+        "raw_sha256": "db94cf38aca756af0a6832451d38a57220f190f64bb54479e377d8af0c68b5ca",
+        "candidate_identity_confirmed": true
+      },
+      "raw_output": "/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-orphan-v4-3/child-init.c: In function \u2018main\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-orphan-v4-3/child-init.c:14:86: warning: ignoring return value of \u2018read\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n   14 |  char token[128]={0};int fd=open(\"/mnt/child-bind/token\",O_RDONLY);if(fd<0)return 94;read(fd,token,127);close(fd);\n      |                                                                                      ^~~~~~~~~~~~~~~~~~\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-orphan-v4-3/child-init.c: In function \u2018stop\u2019:\n/home/ubuntu/build/pea-evaluation-20261028/nerd-runsc-orphan-v4-3/child-init.c:7:27: warning: ignoring return value of \u2018write\u2019 declared with attribute \u2018warn_unused_result\u2019 [-Wunused-result]\n    7 | static void stop(int s) { write(1,\"CHILD_TERM\\n\",11); _exit(42); }\n      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.095775026,\"step\":\"create-Garden-parent-with-init-cgroup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.055043536,\"step\":\"start-parent\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.054621343,\"step\":\"missing-child-user-negative\"}\nFAILED_START process=<nil> error=1 error occurred:\n\t* OCI runtime start failed: starting container: starting sub-container [/bin/missing-pea-executable]: creating process: failed to load /bin/missing-pea-executable: no such file or directory\n\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.177885898,\"step\":\"failed-child-Start-owned-rollback\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.123564736,\"step\":\"Containerizer-CreatePea-RunPea-internal-Start\"}\nCHILD_INIT PARENT_HTTP_SENTINEL\nBRIDGE_CHILD_READY pid=2 uid=1234 gid=1234 group5678=1 bind=CHILD_BIND_SENTINEL\nBRIDGE_GROUP parent=106 child=106 annotations=map[container-type:pea io.kubernetes.cri.container-type:container io.kubernetes.cri.sandbox-id:pea-parent sandbox-container:pea-parent]\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.020430601,\"step\":\"child-image-user-bind-loopback-and-group\"}\nRESTART_LAUNCH_READY parent-and-child-running; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.013184621,\"step\":\"new-client-reattach-two-callers\"}\nRESTART_WAIT caller=0 code=0 error=injected image deletion failure\nRESTART_WAIT caller=1 code=0 error=injected image deletion failure\nORPHAN_READY image-and-metadata-retained; child-task-absent; client-exiting\n\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.04115931,\"step\":\"new-client-missing-task-orphan-cleanup\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.000281381,\"step\":\"restart-cleanup-delete-pea-child\"}\n{\"error\":\"\\u003cnil\\u003e\",\"seconds\":0.086060247,\"step\":\"restart-cleanup-delete-pea-parent\"}\nBRIDGE_PASS image-backed Garden path; no external child CRI or manual Start\n\nPRE_DAEMON_TEARDOWN {\"tasks\": {\"exit_code\": 0, \"output\": \"TASK    PID    STATUS    \\n\"}, \"containers\": {\"exit_code\": 0, \"output\": \"CONTAINER    IMAGE    RUNTIME    \\n\"}}\nPRE_NAMESPACE_TEARDOWN {\"remaining_processes\": [], \"extra_mounts\": [], \"remaining_sockets\": [], \"remaining_workload_cgroups\": []}\n",
+      "snapshot_sha256": "6e0b1d5b446de90ca9a502d093486b879365f599a4d4a400eeeca338ee30a6b0",
+      "pre_daemon_teardown_inventory": {
+        "tasks": {
+          "exit_code": 0,
+          "output": "TASK    PID    STATUS    \n"
+        },
+        "containers": {
+          "exit_code": 0,
+          "output": "CONTAINER    IMAGE    RUNTIME    \n"
+        }
+      },
+      "pre_daemon_teardown_runtime_processes": [],
+      "cleanup": {
+        "remaining_processes": [],
+        "extra_mounts": [],
+        "remaining_sockets": [],
+        "remaining_workload_cgroups": []
+      },
+      "grootfs_images_remaining": [],
+      "grootfs_remaining_loops": []
+    }
+  ],
+  "excluded_latest_head_claims": {
+    "grootfs-restart-lifecycle-v4.json": "Executed probe v12/Garden383f164c3, not latest head; replaced by identity-checked v5",
+    "grootfs-orphan-lifecycle-v3.json": "Executed probe v12/Garden383f164c3, not latest head; replaced by identity-checked v4"
+  },
+  "post_campaign_owned_units": "",
+  "local_checks": [
+    {
+      "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+      "command": "Bundler4.0.23 exec rspec spec/jobs/garden_spec.rb; Ruby4.0.7/macOS arm64; external manifest adds only darwin25 platform, identical locked gem specs; RUBYOPT=-rostruct",
+      "raw_sha256": "a7f535b9f2eade41d0d173ff7f47d13292c4c2a95b0691b4aa3879a5d7d20adb",
+      "raw_output": "/private/var/folders/b6/kz7pzjk56db8p_94cbf2dbh40000gn/T/opencode/image-backed-peas-20261028/bundle/ruby/4.0.0/gems/bosh-template-2.4.0/lib/bosh/template/evaluation_context.rb:1: warning: ostruct used to be loaded from the standard library, but is not part of the default gems since Ruby 4.0.0.\nYou can add ostruct to your Gemfile or gemspec to fix this error.\n......................................................................................\n\nFinished in 0.38809 seconds (files took 0.9256 seconds to load)\n86 examples, 0 failures\n\n"
+    },
+    {
+      "candidate": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+      "command": "python3 -B scripts/verify_provenance.py --toolchain-package <verified golang-1.27-linux.tgz>",
+      "raw_sha256": "cd71d3239671a3e6fedfb8008996d87145a4fe5fcc140a0468590f0db7f0259f",
+      "raw_output": "Verified release-local contract consistency for the Go toolchain, Guardian source, and behavior gates\n"
+    },
+    {
+      "candidate": "9159977ec9fdf3940e1d070ec7e1a5f4a3651d14",
+      "command": "python3 -B -m unittest discover -s scripts/tests -p test_*provenance.py; unchanged verifier/tests reused",
+      "raw_sha256": "4220aa4271b528374cd431701f0b352dbbc6457f41c444d2206e4e69b74763c5",
+      "raw_output": "...............................................................................\n----------------------------------------------------------------------\nRan 79 tests in 150.479s\n\nOK\n"
+    }
+  ],
+  "retained_gates": {
+    "shipped_cf": "Native shipped6/6 PASS including healthcheck and actual parent-rootfs loader-negative control; live Rep and installed candidate remain OPEN",
+    "resources": "FAIL: runsc child holds128MiB under verified64MiB OCI limit; parent memory/CPU metrics drop to0 while child runs. Stock3/3 discriminator PASS, runsc remaining2 repetitions stopped; CPU enforcement NOT RUN",
+    "packaging": "NOT RUN: candidate source-release assembly, installed identity and rollout/rollback",
+    "parent": "BLOCKED: deliberately unadopted component gitlinks; no pin staging to obtain PASS",
+    "review": "Owner requested no bot-review dialogue October28. Self-review disclosed; executable resource FAIL and unexecuted installed/packaging/live/adoption gates keep this draft, independent of bot verdicts"
+  },
+  "grootfs_source_reuse": {
+    "tree": "ffb06fd23fb84019a420635278a92b62e7881375",
+    "unchanged_since": "3f61915f6388403fa455c641c6102253ddd81028",
+    "proof": "git diff 3f61915f6 HEAD -- grootfs go.mod go.sum vendor was empty"
+  }
+}
