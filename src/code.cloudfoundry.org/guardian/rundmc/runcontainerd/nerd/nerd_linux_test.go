@@ -111,6 +111,35 @@ func (rpc *policyTasksServer) Kill(_ context.Context, request *tasksapi.KillRequ
 	return nil, status.Error(codes.PermissionDenied, "policy fixture stops before task signaling")
 }
 
+func TestNerdSpecWithoutTask(t *testing.T) {
+	dir := t.TempDir()
+	listener, err := net.Listen("unix", filepath.Join(dir, "containerd.sock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := grpc.NewServer()
+	defer server.Stop()
+	want := &specs.Spec{Annotations: map[string]string{"container-type": "pea", "sandbox-container": "parent"}}
+	encoded, err := typeurl.MarshalAny(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	containersapi.RegisterContainersServer(server, &policyContainersServer{stored: &containersapi.Container{ID: "orphan", Spec: typeurl.MarshalProto(encoded)}})
+	// No TaskService is registered: metadata lookup must not request a task.
+	go func() { _ = server.Serve(listener) }()
+	c, err := client.New(listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	ctx := namespaces.WithNamespace(context.Background(), "spec-orphan")
+	n := nerd.New(c, ctx, dir, metrics.NewMetricsProvider(lagertest.NewTestLogger("metrics"), dir), runcontainerd.RunscRuntime)
+	got, err := n.Spec(lagertest.NewTestLogger("spec"), "orphan")
+	if err != nil || got == nil || got.Annotations["sandbox-container"] != "parent" {
+		t.Fatalf("task-free spec = %+v, %v", got, err)
+	}
+}
+
 func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 	for _, test := range []struct {
 		runtimeType       string
