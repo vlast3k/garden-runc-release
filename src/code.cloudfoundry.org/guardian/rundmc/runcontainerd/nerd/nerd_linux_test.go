@@ -149,6 +149,7 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 		annotations       map[string]string
 		wantContainerType string
 		wantSandboxID     string
+		wantTTY           bool
 	}{
 		{wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true},
 		{runtimeType: "io.containerd.runc.v2", wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true},
@@ -156,6 +157,8 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"sentinel": "retained"}, wantContainerType: "sandbox"},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"io.kubernetes.cri.container-type": "container"}, wantContainerType: "container"},
 		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent", "sentinel": "retained"}, wantContainerType: "container", wantSandboxID: "garden-parent"},
+		{runtimeType: "io.containerd.runsc.v1", wantRuntime: "io.containerd.runsc.v1", annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent"}, wantContainerType: "container", wantSandboxID: "garden-parent", wantTTY: true},
+		{runtimeType: "io.containerd.runc.v2", wantRuntime: "io.containerd.runc.v2", wantWindows: true, wantOptions: true, annotations: map[string]string{"container-type": "pea", "sandbox-container": "garden-parent"}, wantTTY: true},
 	} {
 		t.Run(test.runtimeType, func(t *testing.T) {
 			socketDir, err := os.MkdirTemp("", "nerd-policy-")
@@ -196,7 +199,7 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 			policyLog := lager.NewLogger("nerd-policy")
 			manager := nerd.New(containerdClient, ctx, t.TempDir(), metrics.NewMetricsProvider(policyLog, t.TempDir()), policy)
 			wantSentinel := test.annotations["sentinel"]
-			spec := &specs.Spec{Version: specs.Version, Windows: &specs.Windows{}, Process: &specs.Process{Args: []string{"/policy-sentinel"}, Cwd: "/"}, Annotations: test.annotations}
+			spec := &specs.Spec{Version: specs.Version, Windows: &specs.Windows{}, Process: &specs.Process{Args: []string{"/policy-sentinel"}, Cwd: "/", Terminal: test.wantTTY}, Annotations: test.annotations}
 			err = manager.Create(lager.NewLogger("nerd-policy"), "policy-container", spec, 4242, 4343, func() (io.Reader, io.Writer, io.Writer) { return nil, nil, nil })
 			if err == nil || !strings.Contains(err.Error(), "policy fixture stops before runtime creation") {
 				t.Fatalf("Create error = %v, want bounded fixture rejection", err)
@@ -258,6 +261,9 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 			}
 			select {
 			case request := <-taskRPC.created:
+				if request.Terminal != test.wantTTY || (test.wantTTY && request.Stderr != "") {
+					t.Errorf("task terminal = %t, stderr = %q; want terminal %t", request.Terminal, request.Stderr, test.wantTTY)
+				}
 				if request.ContainerID != "policy-container" {
 					t.Errorf("task container ID = %q", request.ContainerID)
 				}

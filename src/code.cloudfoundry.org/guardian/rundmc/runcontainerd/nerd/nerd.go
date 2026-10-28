@@ -38,7 +38,14 @@ type Nerd struct {
 	mp        *metrics.MetricsProvider
 	policy    runcontainerd.RuntimePolicy
 	peaIOMu   sync.Mutex
-	peaTasks  map[string]client.Task
+	peaTasks  map[string]*peaTask
+}
+
+type peaTask struct {
+	task      client.Task
+	stdinDone <-chan struct{}
+	context   context.Context
+	cancel    context.CancelFunc
 }
 
 func New(containerdClient *client.Client, context context.Context, ioFifoDir string, mp *metrics.MetricsProvider, policy runcontainerd.RuntimePolicy) *Nerd {
@@ -48,7 +55,7 @@ func New(containerdClient *client.Client, context context.Context, ioFifoDir str
 		ioFifoDir: ioFifoDir,
 		mp:        mp,
 		policy:    policy,
-		peaTasks:  make(map[string]client.Task),
+		peaTasks:  make(map[string]*peaTask),
 	}
 }
 
@@ -107,10 +114,21 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 		// runsc manages its own keyring and UID/GID via the OCI spec.
 		taskOpts = append(taskOpts, client.WithNoNewKeyring, WithUIDAndGID(hostUID, hostGID))
 	}
-	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), taskOpts...)
-	if err == nil && spec.Annotations["container-type"] == "pea" {
+	isPea := spec.Annotations["container-type"] == "pea"
+	processIO := noTTYProcessIO(pio)
+	var inputDone chan struct{}
+	if isPea {
+		inputDone = make(chan struct{})
+		processIO = func() (io.Reader, io.Writer, io.Writer, bool) {
+			stdin, stdout, stderr := pio()
+			return &peaInput{reader: orEmpty(stdin), done: inputDone}, stdout, stderr, spec.Process != nil && spec.Process.Terminal
+		}
+	}
+	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(processIO, n.ioFifoDir)), taskOpts...)
+	if err == nil && isPea {
+		ctx, cancel := context.WithCancel(n.context)
 		n.peaIOMu.Lock()
-		n.peaTasks[containerID] = task
+		n.peaTasks[containerID] = &peaTask{task: task, stdinDone: inputDone, context: ctx, cancel: cancel}
 		n.peaIOMu.Unlock()
 	}
 	return err
@@ -128,11 +146,28 @@ func (n *Nerd) Start(log lager.Logger, containerID string) error {
 		return err
 	}
 
+	n.peaIOMu.Lock()
+	pea := n.peaTasks[containerID]
+	n.peaIOMu.Unlock()
 	log.Debug("starting-task", lager.Data{"containerID": containerID})
 	if err := task.Start(n.context); err != nil {
 		return err
 	}
 
+	if pea != nil {
+		// The shim holds a keepalive writer on stdin. Release it only after
+		// cio has written the supplied input, never immediately after Start.
+		go func() {
+			select {
+			case <-pea.stdinDone:
+				if err := task.CloseIO(pea.context, client.WithStdinCloser); err != nil {
+					log.Error("failed-closing-pea-stdin", err, lager.Data{"containerID": containerID})
+				}
+			case <-pea.context.Done():
+			}
+		}()
+		return nil
+	}
 	return task.CloseIO(n.context, client.WithStdinCloser)
 }
 
@@ -328,7 +363,7 @@ func (n *Nerd) GetTask(log lager.Logger, id string) (runcontainerd.BackingProces
 	n.peaIOMu.Unlock()
 	if created != nil {
 		// Wait must drain the actual creator's IO, not cio.Load's no-op Wait.
-		return NewBackingProcess(log, created, n.context), nil
+		return NewBackingProcess(log, created.task, n.context), nil
 	}
 	_, task, err := n.loadContainerAndTask(log, id)
 	if err != nil {
@@ -355,7 +390,8 @@ func (n *Nerd) AttachTask(log lager.Logger, id string, pio garden.ProcessIO) (ru
 		}
 		return nil, err
 	}
-	n.peaTasks[id] = task
+	ctx, cancel := context.WithCancel(n.context)
+	n.peaTasks[id] = &peaTask{task: task, context: ctx, cancel: cancel}
 	return NewBackingProcess(log, task, n.context), nil
 }
 
@@ -364,9 +400,12 @@ func (n *Nerd) releasePeaIO(id string) error {
 	task := n.peaTasks[id]
 	delete(n.peaTasks, id)
 	n.peaIOMu.Unlock()
-	if task != nil && task.IO() != nil {
-		task.IO().Cancel()
-		return task.IO().Close()
+	if task != nil {
+		task.cancel()
+		if task.task.IO() != nil {
+			task.task.IO().Cancel()
+			return task.task.IO().Close()
+		}
 	}
 	return nil
 }
