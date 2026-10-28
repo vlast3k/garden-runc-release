@@ -4,6 +4,90 @@
   "garden_source": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
   "guardian_tree": "128ea6c11c1ed34bbf6b607c8ebdaf9bc5d70177",
   "gvisor_source": "3bd79c352df8cdbb01e807b7fb463244658fa990",
+  "attach_followup": {
+    "scope": "Native source regression checks on the new candidate; prior runtime campaigns below remain at their recorded 7658f123a identity",
+    "garden_source": "3c7e27954e3dce143cfc8356ed464e44c8e785b7",
+    "guardian_tree": "07a0f31ce56671233d8eae71fc2290d162058db1",
+    "local_raw_shell_artifacts": {
+      "directory": "/Users/I024148/.local/share/opencode/shell/c69486bf2c1d99b3a31d1c60348d36b04a83b132",
+      "files": [
+        {"name": "sh_1813b66ac001wmI5WXlnsopjti.out", "bytes": 10870, "sha256": "f4a433e8be875976882152a44879d1b21a95c6461780edeea0e625fd5670704c"},
+        {"name": "sh_181349adc00101L7C598r5D5yT.out", "bytes": 7306, "sha256": "2c152cee0fbdcc3276fbb4140f87cde207be9dcad5d66b66f349aaa3bfba9c02"},
+        {"name": "sh_181321138001roGXSRRHNlPrNa.out", "bytes": 3830, "sha256": "0a0cb02d6de76fdcb3621d178829b8509b8bf4ce6ebd3b3c20dc6e263df0100d"},
+        {"name": "sh_1813353df001nqdXvLDYGkqXzj.out", "bytes": 4759, "sha256": "70288c060d6ce7d733c99343234aaed089af4cda502a1692e937cd323afd8b22"}
+      ]
+    },
+    "clean_candidate_validation": {
+      "runner": "validate_attach_candidate_v1.py",
+      "instance_id": "i-0aa48e0bb8efc28c6",
+      "go_prefix": ["/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go", "test", "-p=2", "-count=1", "-timeout=120s"],
+      "focused_results": [
+        {"args": ["./rundmc/users"], "exit_code": 0, "output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/users\t0.012s\n"},
+        {"args": ["./rundmc/peas"], "exit_code": 0, "output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/peas\t0.261s\n"},
+        {"args": ["./rundmc/runcontainerd"], "exit_code": 0, "output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/runcontainerd\t0.066s\n"},
+        {"args": ["./guardiancmd", "-run=TestContainerizer"], "exit_code": 0, "output": "ok  \tcode.cloudfoundry.org/guardian/guardiancmd\t0.017s\n"},
+        {"args": ["./rundmc/runcontainerd/nerd", "-run=TestNerd"], "exit_code": 0, "output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd\t0.121s\n"}
+      ],
+      "rundmc_command": ["sudo", "-n", "timeout", "--kill-after=5s", "130s", "unshare", "--mount", "--propagation=private", "/home/ubuntu/build/pea-evaluation-20261028/rundmc-3c7e27954.test", "-test.timeout=120s", "-test.count=1"],
+      "rundmc_exit_code": 0,
+      "rundmc_actual": "176 Passed | 0 Failed | 0 Pending | 0 Skipped",
+      "other_checks": [
+        {"args": ["build", "-p=2", "-trimpath", "-o", "/home/ubuntu/build/pea-evaluation-20261028/gdn-3c7e27954", "./cmd/gdn"], "exit_code": 0, "output": ""},
+        {"args": ["vet", "-p=2", "./..."], "exit_code": 0, "output": ""},
+        {"args": ["build", "-p=2", "./..."], "exit_code": 0, "output": ""},
+        {"args": ["test", "-race", "-p=2", "-count=1", "-timeout=120s", "./rundmc/runcontainerd", "./rundmc/runcontainerd/nerd", "-run=TestPea|TestNerdPea"], "exit_code": 0, "output": "ok  \tcode.cloudfoundry.org/guardian/rundmc/runcontainerd\t1.032s\nok  \tcode.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd\t1.143s\n"}
+      ],
+      "build_boundary": "Native gdn and probe v15 builds succeeded, but their digests were not retrieved before network access failed. No runtime run or installed identity is attributed to these builds."
+    },
+    "review_dispositions": {
+      "CFAR1540-S3": {
+        "claim": "Fresh-client Attach always uses non-terminal IO because AttachTask omits cio.WithTerminal",
+        "disposition": "NOT SUBSTANTIATED as a source defect; native runtime fresh-client TTY execution remains NOT RUN",
+        "source_proof": ["vendor/github.com/containerd/containerd/v2/client/container.go: loadTask -> attachExistingIO -> loadFifos copies response.Process.Terminal", "vendor/github.com/containerd/containerd/v2/pkg/cio/io_unix.go: openFifos/copyIO suppress stderr when fifos.Terminal is true", "gVisor pkg/shim/v1/runsc/service.go State returns sio.Terminal"],
+        "discriminator": "TestNerdPeaFreshAttachUsesRuntimeTerminal passes under race for both terminal and nonterminal. OCI Process.Terminal deliberately disagrees with the runtime response. Terminal stderr names a missing directory and must never be opened; nonterminal stdout/stderr bytes must both be delivered. No production terminal-attach change was made."
+      },
+      "CFAR1540-S4": {
+        "claim": "Pea Attach can open child IO through missing parent metadata",
+        "disposition": "REPAIRED AND REVALIDATED",
+        "implementation": "Look up parent metadata after matching child ownership; map missing parent to Garden ContainerNotFoundError and preserve other parent lookup errors before child IO is opened.",
+        "control_base": "7658f123aa5bb3fcbdc019c8b7bad5ce8ade782d",
+        "control_command": ["/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go", "test", "-race", "-p=2", "-count=1", "-timeout=30s", "./rundmc/runcontainerd", "-run=TestPeaAttachRejectsMissingParentBeforeOpeningChildIO", "-v"],
+        "control_exit_code": 1,
+        "control_actual": "Both container_parent_not_found and metadata_unavailable fail with 'missing parent opened child IO' and error=<nil>",
+        "repaired_command": ["/home/ubuntu/build/pea-evaluation-20261028/tools/go/bin/go", "test", "-race", "-p=2", "-count=1", "-timeout=30s", "./rundmc/runcontainerd", "-run=TestPea", "-v"],
+        "repaired_exit_code": 0,
+        "owned_overlay_identity": {
+          "pea_attach_test.go": "e9795dbf7a4e546aca3669ecd17d65c70da0a08002bf5bb0e2519be48e2a2964",
+          "pea_attach_linux_test.go": "bc9cec67f367b40e9630fb9e6536fcdde0d2640ce237708a16f367e0eb914e8f",
+          "old_runcontainerd.go": "400f1724eb77e98fb8decd15d21b6e283bd3a141f9f7b2ee8defde411770c3b0",
+          "repaired_runcontainerd.go": "2f98171bed589b0b9087621fe07b0cca5df31145ac3647b8f19a7cf458c96b21"
+        },
+        "overlay_boundary": "The first discrimination used owned test/source overlays on clean 7658f, restored afterward. The committed 3c7e candidate then passed clean native validation separately; its files match the repaired overlay hashes."
+      }
+    },
+    "retained_fixture_failures": [
+      "Attach-review-v1 failed because the fixture FIFO readers could see EOF before writers opened; teardown also lacked a non-signaling stopped-task response. Fixture keepalive endpoints and explicit stopped Wait/Kill responses repaired it.",
+      "Attach-review-v2's S4 test failed with unrelated 'child task attachment is unavailable'. The v3 control uses a working task attacher and demonstrably opens child IO through the missing parent on old source. The unrelated v2 rejection is not credited as discrimination."
+    ],
+    "shipped_assets": {
+      "source_instance": "cf_cells_1/diego-cell/178aba96-7728-4b96-a6a3-725748160b8a",
+      "source_director": "ba9f258f-b616-46cb-a7af-44b2ec6413fb",
+      "verification": "Installed cell, guarded OCI copy and local copy match each asset's bytes and SHA256. Builder transfer completed through resumed rsync but final builder size/hash verification is BLOCKED by SSH ingress; completion of transfer is not byte-identity proof.",
+      "files": [
+        {"installed_path": "/var/vcap/packages/proxy/envoy", "bytes": 90411184, "sha256": "32d3cc203b8abdce8c2ed916a298124364e0c48e83b7196f551e769b6a489bf8"},
+        {"installed_path": "/var/vcap/packages/healthcheck/healthcheck", "bytes": 8602202, "sha256": "bceeb4880b4ef244486dfd4448d77c22ed14aa2d67833efc10b31550564e7480"},
+        {"installed_path": "/var/vcap/packages/cflinuxfs4/rootfs.tar", "bytes": 1457131520, "sha256": "23b77c7d06171d55613dae3cc69901cb38171739df866001ff4b3191ef7cca70"}
+      ],
+      "healthcheck_help": "The verified shipped healthcheck -h was executed natively to inspect flags. This is not execution as a Garden pea."
+    },
+    "execution_blocker": {
+      "criterion": "New-candidate runtime regressions, shipped Envoy/healthcheck image execution and actual Garden HTTP boundary",
+      "attempt": "Inventory-revalidated direct SSH and rsync to ubuntu@18.206.178.165 using the existing verified key and host-key policy",
+      "actual": "SSH port22 timed out before authentication. EC2 running; instance/system/EBS reachability passed. Current egress193.57.20.71 is outside both attached security groups' SSH CIDRs; SSM inventory is empty.",
+      "missing_input": "Restore a currently approved network path, or obtain owner approval for a narrowly scoped SSH ingress change. No security-group/IAM modification or agent installation was attempted.",
+      "retained_required_gates": ["Shipped/runtime checks NOT RUN", "Limits/accounting NOT RUN", "Packaging/install NOT RUN", "Parent/adoption BLOCKED"]
+    }
+  },
   "environment": {
     "instance_id": "i-0aa48e0bb8efc28c6",
     "platform": "Linux 6.8.0-1060-aws x86_64",
