@@ -164,12 +164,27 @@ func TestNerdRuntimePolicyCreatePayload(t *testing.T) {
 			ctx, cancel := context.WithTimeout(namespaces.WithNamespace(context.Background(), "garden"), 5*time.Second)
 			defer cancel()
 			ctx = leases.WithLease(ctx, "lease-is-off")
-			manager := nerd.New(containerdClient, ctx, t.TempDir(), nil, policy)
+			policyLog := lager.NewLogger("nerd-policy")
+			manager := nerd.New(containerdClient, ctx, t.TempDir(), metrics.NewMetricsProvider(policyLog, t.TempDir()), policy)
 			wantSentinel := test.annotations["sentinel"]
 			spec := &specs.Spec{Version: specs.Version, Windows: &specs.Windows{}, Process: &specs.Process{Args: []string{"/policy-sentinel"}, Cwd: "/"}, Annotations: test.annotations}
 			err = manager.Create(lager.NewLogger("nerd-policy"), "policy-container", spec, 4242, 4343, func() (io.Reader, io.Writer, io.Writer) { return nil, nil, nil })
 			if err == nil || !strings.Contains(err.Error(), "policy fixture stops before runtime creation") {
 				t.Fatalf("Create error = %v, want bounded fixture rejection", err)
+			}
+			// The fixture deliberately exposes a task after failed Create. Owned
+			// rollback must reach its runtime-specific delete path before returning.
+			rollback := taskRPC.deleted
+			if test.wantOptions {
+				rollback = taskRPC.killed
+			}
+			select {
+			case id := <-rollback:
+				if id != "policy-container" {
+					t.Errorf("rollback ID = %q", id)
+				}
+			default:
+				t.Fatal("failed Create did not attempt owned task rollback")
 			}
 			select {
 			case request := <-containerRPC.created:
