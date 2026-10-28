@@ -264,6 +264,13 @@ func (r *RunContainerd) Attach(log lager.Logger, sandboxID, processID string, io
 			if spec.Annotations["sandbox-container"] != sandboxID {
 				return nil, garden.ProcessNotFoundError{ProcessID: processID}
 			}
+			parent, err := r.containerManager.Spec(log, sandboxID)
+			if isNotFound(err) || (err == nil && parent == nil) {
+				return nil, garden.ContainerNotFoundError{Handle: sandboxID}
+			}
+			if err != nil {
+				return nil, err
+			}
 			return r.peaRunner.Attach(log, sandboxID, processID, io)
 		}
 		if err != nil && !isNotFound(err) {

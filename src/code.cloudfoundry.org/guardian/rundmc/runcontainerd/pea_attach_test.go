@@ -19,6 +19,18 @@ type missingTaskAttacher struct {
 	*runcontainerdfakes.FakeProcessManager
 }
 
+type availableTaskAttacher struct {
+	*runcontainerdfakes.FakeProcessManager
+	attachments int
+}
+
+func (m *availableTaskAttacher) AttachTask(_ lager.Logger, id string, _ garden.ProcessIO) (runcontainerd.BackingProcess, error) {
+	m.attachments++
+	p := &runcontainerdfakes.FakeBackingProcess{}
+	p.IDReturns(id)
+	return p, nil
+}
+
 func (m missingTaskAttacher) AttachTask(_ lager.Logger, id string, _ garden.ProcessIO) (runcontainerd.BackingProcess, error) {
 	return nil, runcontainerd.TaskNotFoundError{Handle: id}
 }
@@ -141,5 +153,35 @@ func TestPeaAttachUsesChildAndSingleOutputOwner(t *testing.T) {
 	}
 	if code, err := p.Wait(); err != nil || code != 42 || manager.DeleteCallCount() != 1 || volume.DestroyCallCount() != 1 {
 		t.Fatalf("shared restart/Attach Wait = %d, %v", code, err)
+	}
+}
+
+func TestPeaAttachRejectsMissingParentBeforeOpeningChildIO(t *testing.T) {
+	for _, failure := range []error{runcontainerd.ContainerNotFoundError{Handle: "parent"}, errors.New("metadata unavailable")} {
+		t.Run(failure.Error(), func(t *testing.T) {
+			log := lagertest.NewTestLogger("pea-attach-parent")
+			manager := &runcontainerdfakes.FakeContainerManager{}
+			manager.SpecCalls(func(_ lager.Logger, id string) (*specs.Spec, error) {
+				if id == "parent" {
+					return nil, failure
+				}
+				return &specs.Spec{Annotations: map[string]string{"container-type": "pea", "sandbox-container": "parent"}}, nil
+			})
+			processes := &availableTaskAttacher{FakeProcessManager: &runcontainerdfakes.FakeProcessManager{}}
+			runtime := runcontainerd.New(manager, processes, nil, nil, nil, nil, false, nil, nil, nil, false, nil)
+			runcontainerd.NewRunContainerPea(runtime, processes, &runcontainerdfakes.FakeVolumizer{}, false)
+			process, err := runtime.Attach(log, "parent", "child", garden.ProcessIO{})
+			if process != nil || err == nil || processes.attachments != 0 || processes.GetTaskCallCount() != 0 || processes.GetProcessCallCount() != 0 {
+				t.Fatalf("missing parent opened child IO: process=%v error=%v", process, err)
+			}
+			var missing garden.ContainerNotFoundError
+			if _, notFound := failure.(runcontainerd.ContainerNotFoundError); notFound {
+				if !errors.As(err, &missing) || missing.Handle != "parent" {
+					t.Fatalf("wrong missing-parent error: %v", err)
+				}
+			} else if !errors.Is(err, failure) {
+				t.Fatalf("parent lookup error was hidden: %v", err)
+			}
+		})
 	}
 }
