@@ -111,6 +111,101 @@ func (rpc *policyTasksServer) Kill(_ context.Context, request *tasksapi.KillRequ
 	return nil, status.Error(codes.PermissionDenied, "policy fixture stops before task signaling")
 }
 
+type peaInputTasksServer struct {
+	policyTasksServer
+	closed chan *tasksapi.CloseIORequest
+}
+
+func (rpc *peaInputTasksServer) Create(_ context.Context, request *tasksapi.CreateTaskRequest) (*tasksapi.CreateTaskResponse, error) {
+	rpc.created <- request
+	return &tasksapi.CreateTaskResponse{ContainerID: request.ContainerID, Pid: ^uint32(0)}, nil
+}
+
+func (rpc *peaInputTasksServer) Start(context.Context, *tasksapi.StartRequest) (*tasksapi.StartResponse, error) {
+	return &tasksapi.StartResponse{Pid: ^uint32(0)}, nil
+}
+
+func (rpc *peaInputTasksServer) CloseIO(_ context.Context, request *tasksapi.CloseIORequest) (*emptypb.Empty, error) {
+	rpc.closed <- request
+	return &emptypb.Empty{}, nil
+}
+
+func (rpc *peaInputTasksServer) Delete(context.Context, *tasksapi.DeleteTaskRequest) (*tasksapi.DeleteResponse, error) {
+	return &tasksapi.DeleteResponse{}, nil
+}
+
+func TestNerdPeaCloseIOFollowsInputCompletion(t *testing.T) {
+	dir := t.TempDir()
+	listener, err := net.Listen("unix", filepath.Join(dir, "containerd.sock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := grpc.NewServer()
+	defer server.Stop()
+	rpc := &peaInputTasksServer{policyTasksServer: policyTasksServer{created: make(chan *tasksapi.CreateTaskRequest, 1)}, closed: make(chan *tasksapi.CloseIORequest, 2)}
+	containersapi.RegisterContainersServer(server, &policyContainersServer{created: make(chan *containersapi.Container, 1)})
+	tasksapi.RegisterTasksServer(server, rpc)
+	go func() { _ = server.Serve(listener) }()
+	c, err := client.New(listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	ctx, cancel := context.WithTimeout(namespaces.WithNamespace(context.Background(), "pea-input"), 5*time.Second)
+	defer cancel()
+	ctx = leases.WithLease(ctx, "fixture-no-lease")
+	log := lagertest.NewTestLogger("pea-input")
+	n := nerd.New(c, ctx, dir, metrics.NewMetricsProvider(log, dir), runcontainerd.RunscRuntime)
+	input, writer := io.Pipe()
+	defer input.Close()
+	defer writer.Close()
+	spec := &specs.Spec{Process: &specs.Process{Args: []string{"/unused"}}, Annotations: map[string]string{"container-type": "pea", "sandbox-container": "parent"}}
+	if err := n.Create(log, "child", spec, 0, 0, func() (io.Reader, io.Writer, io.Writer) { return input, nil, nil }); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		// Also unblock the supplied reader on a failed assertion before releasing
+		// the cached cio workers. This mock never signals a host process.
+		_ = input.Close()
+		if err := n.Delete(log, "child"); err != nil {
+			t.Error(err)
+		}
+	}()
+	request := <-rpc.created
+	// A real FIFO endpoint permits cio's final write without requiring a shim.
+	fifo, err := os.OpenFile(request.Stdin, os.O_RDWR|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fifo.Close()
+	if err := n.Start(log, "child"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-rpc.closed:
+		t.Fatal("CloseIO preceded supplied stdin completion")
+	case <-time.After(50 * time.Millisecond):
+	}
+	if _, err := io.WriteString(writer, "last bytes"); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case closed := <-rpc.closed:
+		if !closed.Stdin || closed.ContainerID != "child" {
+			t.Fatalf("CloseIO request = %+v", closed)
+		}
+	case <-ctx.Done():
+		t.Fatal("CloseIO did not follow supplied stdin completion")
+	}
+	b := make([]byte, 10)
+	if _, err := io.ReadFull(fifo, b); err != nil || string(b) != "last bytes" {
+		t.Fatalf("final FIFO bytes = %q, %v", b, err)
+	}
+}
+
 func TestNerdSpecWithoutTask(t *testing.T) {
 	dir := t.TempDir()
 	listener, err := net.Listen("unix", filepath.Join(dir, "containerd.sock"))

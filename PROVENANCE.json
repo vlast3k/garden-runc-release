@@ -14,7 +14,7 @@
   },
   "guardian": {
     "path": "src/code.cloudfoundry.org/guardian",
-    "tree": "e252d77b5078640fdccb2099aa62054860960182",
+    "tree": "128ea6c11c1ed34bbf6b607c8ebdaf9bc5d70177",
     "upstream_revision": "90175b24cfcdaafc1f5e26a060251423a53805a3",
     "ported_revision": "e4e266e0dad0e2957f5920b927a7f86776f447ff",
     "ported_repository": "https://github.tools.sap/cp-runtime/guardian.git"
