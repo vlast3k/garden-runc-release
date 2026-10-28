@@ -133,7 +133,17 @@ func (r *RunContainerPea) register(log lager.Logger, id string, process BackingP
 
 func (r *RunContainerPea) Attach(log lager.Logger, parent, id string, pio garden.ProcessIO) (garden.Process, error) {
 	if pio.Stdin != nil {
-		return nil, fmt.Errorf("cannot attach stdin to an image-backed pea after Start")
+		// Garden HTTP always supplies an input pipe, including when the client
+		// attaches output only. Close that endpoint rather than rejecting the
+		// attachment or forwarding bytes into startup-owned stdin. Close does
+		// not read or wait for the client, and a later pipe write fails.
+		input, transportPipe := pio.Stdin.(*io.PipeReader)
+		if !transportPipe {
+			return nil, fmt.Errorf("cannot attach stdin to an image-backed pea after Start")
+		}
+		if err := input.CloseWithError(fmt.Errorf("image-backed pea attachment stdin is closed")); err != nil {
+			return nil, err
+		}
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()

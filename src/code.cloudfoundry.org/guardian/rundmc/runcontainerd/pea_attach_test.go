@@ -3,6 +3,7 @@ package runcontainerd_test
 import (
 	"bytes"
 	"errors"
+	"io"
 	"sync"
 	"testing"
 
@@ -136,6 +137,14 @@ func TestPeaAttachUsesChildAndSingleOutputOwner(t *testing.T) {
 	}
 	if _, err := runtime.Attach(log, "parent", "child", garden.ProcessIO{Stdin: bytes.NewBufferString("input")}); err == nil {
 		t.Fatal("unsupported stdin silently accepted")
+	}
+	input, writer := io.Pipe()
+	defer writer.Close()
+	if a, err := runtime.Attach(log, "parent", "child", garden.ProcessIO{Stdin: input}); err != nil || a != p {
+		t.Fatalf("Garden transport pipe attachment = %v, %v", a, err)
+	}
+	if n, err := writer.Write([]byte("must not reach startup stdin")); err == nil || n != 0 {
+		t.Fatalf("attached stdin was not closed: bytes=%d error=%v", n, err)
 	}
 	_, _, _, _, _, pio := manager.CreateArgsForCall(0)
 	_, out, _ := pio()

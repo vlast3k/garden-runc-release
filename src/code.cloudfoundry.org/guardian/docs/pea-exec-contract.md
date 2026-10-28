@@ -12,8 +12,11 @@ namespace, not the Sentry's nobody-only host user namespace.
 
 Attach validates the parent, targets the child task, and uses a single FIFO
 reader with output fanout. Run, attached callers and restart cleanup share Wait
-and task/image cleanup. Attach after Start explicitly rejects nonnil stdin;
-output writers retain synchronous ProcessIO backpressure. Metadata remains until
+and task/image cleanup. Stdin remains startup-owned: Attach closes Garden HTTP's
+always-present input pipe without forwarding bytes, permitting output-only
+clients. Other nonnil input readers are rejected; attachment does not reopen or
+close the task's initial stdin. Output writers retain synchronous ProcessIO
+backpressure. Metadata remains until
 image deletion succeeds, allowing cleanup of a missing-task orphan without
 inventing an exit code. Runtime-deletion failure retains image and metadata.
 
