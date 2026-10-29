@@ -33,12 +33,11 @@ func (e *PeaRuntimeCleanupError) Unwrap() error        { return e.Err }
 func (e *PeaRuntimeCleanupError) PeaRootfsInUse() bool { return true }
 
 type RunContainerPea struct {
-	peaManager               PeaManager
-	processManager           ProcessManager
-	volumizer                Volumizer
-	cleanupProcessDirsOnWait bool
-	mu                       sync.Mutex
-	processes                map[string]*peaAttachment
+	peaManager     PeaManager
+	processManager ProcessManager
+	volumizer      Volumizer
+	mu             sync.Mutex
+	processes      map[string]*peaAttachment
 }
 
 type peaAttachment struct {
@@ -53,18 +52,13 @@ type TaskAttacher interface {
 	AttachTask(log lager.Logger, id string, pio garden.ProcessIO) (BackingProcess, error)
 }
 
-func NewRunContainerPea(peaManager PeaManager, processManager ProcessManager, volumizer Volumizer, cleanupProcessDirsOnWait bool) *RunContainerPea {
-	r := &RunContainerPea{
-		peaManager:               peaManager,
-		processManager:           processManager,
-		volumizer:                volumizer,
-		cleanupProcessDirsOnWait: cleanupProcessDirsOnWait,
-		processes:                make(map[string]*peaAttachment),
+func NewRunContainerPea(peaManager PeaManager, processManager ProcessManager, volumizer Volumizer) *RunContainerPea {
+	return &RunContainerPea{
+		peaManager:     peaManager,
+		processManager: processManager,
+		volumizer:      volumizer,
+		processes:      make(map[string]*peaAttachment),
 	}
-	if runtime, ok := peaManager.(*RunContainerd); ok {
-		runtime.peaRunner = r
-	}
-	return r
 }
 
 func (r *RunContainerPea) RunPea(

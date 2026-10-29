@@ -74,7 +74,7 @@ var _ = Describe("Rundmc", func() {
 			0,
 			fakeRuntimeStopper,
 			fakeCPUCgrouper,
-			false, // execPeas: default stock behavior
+			false, // imageBackedPeas: default stock behavior
 		)
 	})
 
@@ -289,21 +289,11 @@ var _ = Describe("Rundmc", func() {
 			})
 		})
 
-		// CFAR-1515: Validated preloaded CF assets use the existing parent's
-		// mounts and rootfs rather than creating separate pea containers.
-		Context("when execPeas is enabled", func() {
-			var execPeasContainerizer *rundmc.Containerizer
+		Context("when image-backed peas are enabled", func() {
+			var imageBackedContainerizer *rundmc.Containerizer
 
 			BeforeEach(func() {
-				fakeOCIRuntime.BundleInfoReturns("parent-bundle", goci.Bndl{Spec: specs.Spec{
-					Mounts: []specs.Mount{{
-						Source:      "/host/healthcheck",
-						Destination: "/etc/cf-assets/healthcheck",
-						Type:        "bind",
-						Options:     []string{"bind", "ro"},
-					}},
-				}}, nil)
-				execPeasContainerizer = rundmc.New(
+				imageBackedContainerizer = rundmc.New(
 					fakeDepot,
 					fakeBundleGenerator,
 					fakeOCIRuntime,
@@ -316,114 +306,39 @@ var _ = Describe("Rundmc", func() {
 					0,
 					fakeRuntimeStopper,
 					fakeCPUCgrouper,
-					true, // execPeas enabled
+					true, // imageBackedPeas
 				)
 			})
 
-			It("execs the process via the runtime instead of creating a pea", func() {
-				processSpec := garden.ProcessSpec{
-					Path:  "/etc/cf-assets/healthcheck/healthcheck",
-					Image: garden.ImageRef{URI: "preloaded:cflinuxfs4"},
-				}
-				_, err := execPeasContainerizer.Run(logger, "some-handle", processSpec, garden.ProcessIO{})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(fakePeaCreator.CreatePeaCallCount()).To(BeZero())
-				Expect(fakeOCIRuntime.ExecCallCount()).To(Equal(1))
-				_, id, execSpec, _ := fakeOCIRuntime.ExecArgsForCall(0)
-				Expect(id).To(Equal("some-handle"))
-				Expect(execSpec.Path).To(Equal("/etc/cf-assets/healthcheck/healthcheck"))
-			})
-
-			It("clears the validated image ref and identical parent bind mounts before exec", func() {
-				processSpec := garden.ProcessSpec{
-					Path:  "/etc/cf-assets/healthcheck/healthcheck",
-					Image: garden.ImageRef{URI: "preloaded:cflinuxfs4"},
-					BindMounts: []garden.BindMount{
-						{SrcPath: "/host/healthcheck", DstPath: "/etc/cf-assets/healthcheck", Mode: garden.BindMountModeRO},
-					},
-				}
-				_, err := execPeasContainerizer.Run(logger, "some-handle", processSpec, garden.ProcessIO{})
-				Expect(err).NotTo(HaveOccurred())
-				_, _, execSpec, _ := fakeOCIRuntime.ExecArgsForCall(0)
-				Expect(execSpec.Image).To(Equal(garden.ImageRef{}))
-				Expect(execSpec.BindMounts).To(BeNil())
-			})
-
-			It("does not exec non-image processes as peas", func() {
-				processSpec := garden.ProcessSpec{Path: "hello"}
-				_, err := execPeasContainerizer.Run(logger, "some-handle", processSpec, garden.ProcessIO{})
-				Expect(err).NotTo(HaveOccurred())
-				// Non-image process should go through normal exec path, not pea
-				Expect(fakePeaCreator.CreatePeaCallCount()).To(BeZero())
-				Expect(fakeOCIRuntime.ExecCallCount()).To(Equal(1))
-				Expect(fakeOCIRuntime.BundleInfoCallCount()).To(BeZero())
-			})
-
-			// CFAR-1515: When exec fails in gVisor mode, the error must bubble
-			// up to Rep — not be silently swallowed. A silenced error means Rep
-			// thinks the sidecar/healthcheck is running when it isn't.
-			It("propagates exec errors to the caller", func() {
-				fakeOCIRuntime.ExecReturns(nil, errors.New("exec-boom"))
-				processSpec := garden.ProcessSpec{
-					Path:  "/etc/cf-assets/healthcheck/healthcheck",
-					Image: garden.ImageRef{URI: "preloaded:cflinuxfs4"},
-				}
-				_, err := execPeasContainerizer.Run(logger, "some-handle", processSpec, garden.ProcessIO{})
-				Expect(err).To(MatchError("exec-boom"))
-			})
-
-			// CFAR-1515: Validated compatibility requests bypass the pea-specific
-			// username resolver; all fields except Image and BindMounts survive.
-			// Mutation confirmed: inserting `spec.User = ""` survived
-			// before this positive assertion was added.
-			It("forwards the caller's identity and spec unchanged except image/mounts", func() {
+			It("forwards the unchanged request to the pea creator without resolving the user", func() {
 				fakeProcess := new(gardenfakes.FakeProcess)
-				fakeProcess.IDReturns("exec-proc-42")
-				fakeOCIRuntime.ExecReturns(fakeProcess, nil)
-
-				inputIO := garden.ProcessIO{
-					Stdin:  strings.NewReader("input"),
-					Stdout: &bytes.Buffer{},
-					Stderr: &bytes.Buffer{},
-				}
+				fakePeaCreator.CreatePeaReturns(fakeProcess, nil)
 				processSpec := garden.ProcessSpec{
-					Path:  "/etc/cf-assets/healthcheck/healthcheck",
-					Args:  []string{"-port=8080", "-timeout=1s"},
-					User:  "vcap",
-					Dir:   "/home/vcap",
-					Env:   []string{"PORT=8080", "HOME=/home/vcap"},
-					Image: garden.ImageRef{URI: "preloaded:cflinuxfs4"},
-					BindMounts: []garden.BindMount{
-						{SrcPath: "/host/healthcheck", DstPath: "/etc/cf-assets/healthcheck", Mode: garden.BindMountModeRO},
-					},
+					Path:       "/etc/cf-assets/healthcheck/healthcheck",
+					User:       "vcap",
+					Image:      garden.ImageRef{URI: "preloaded:cflinuxfs4"},
+					BindMounts: []garden.BindMount{{SrcPath: "/host/healthcheck", DstPath: "/etc/cf-assets/healthcheck", Mode: garden.BindMountModeRO}},
 				}
-				originalSpec := processSpec
-				originalSpec.Args = append([]string(nil), processSpec.Args...)
-				originalSpec.Env = append([]string(nil), processSpec.Env...)
-				originalSpec.BindMounts = append([]garden.BindMount(nil), processSpec.BindMounts...)
-				returnedProcess, err := execPeasContainerizer.Run(logger, "some-handle", processSpec, inputIO)
-				Expect(err).NotTo(HaveOccurred())
+				pio := garden.ProcessIO{Stdin: strings.NewReader("input"), Stdout: &bytes.Buffer{}}
 
-				// Positive: caller's identity and fields forwarded
+				returned, err := imageBackedContainerizer.Run(logger, "some-handle", processSpec, pio)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(returned).To(BeIdenticalTo(fakeProcess))
+				Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(1))
+				_, forwarded, forwardedIO, handle := fakePeaCreator.CreatePeaArgsForCall(0)
+				Expect(forwarded).To(Equal(processSpec))
+				Expect(forwardedIO).To(Equal(pio))
+				Expect(handle).To(Equal("some-handle"))
 				Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(BeZero(),
-					"pea-specific resolver must be bypassed in execPeas mode")
-				_, actualHandle, execSpec, actualIO := fakeOCIRuntime.ExecArgsForCall(0)
-				Expect(actualHandle).To(Equal("some-handle"))
-				Expect(execSpec.User).To(Equal("vcap"),
-					"caller's User must reach the runtime unchanged")
-				Expect(execSpec.Path).To(Equal("/etc/cf-assets/healthcheck/healthcheck"))
-				Expect(execSpec.Dir).To(Equal("/home/vcap"))
-				Expect(execSpec.Image).To(Equal(garden.ImageRef{}))
-				Expect(execSpec.BindMounts).To(BeNil())
-				expectedExecSpec := originalSpec
-				expectedExecSpec.Image = garden.ImageRef{}
-				expectedExecSpec.BindMounts = nil
-				Expect(execSpec).To(Equal(expectedExecSpec))
-				Expect(processSpec).To(Equal(originalSpec))
-				// IO and returned process identity preserved
-				Expect(actualIO).To(Equal(inputIO))
-				Expect(returnedProcess).To(BeIdenticalTo(fakeProcess))
-				Expect(returnedProcess.ID()).To(Equal("exec-proc-42"))
+					"the parent's host PID cannot see a grouped child's image")
+				Expect(fakeOCIRuntime.ExecCallCount()).To(BeZero())
+			})
+
+			It("does not route non-image processes through the pea creator", func() {
+				_, err := imageBackedContainerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fakePeaCreator.CreatePeaCallCount()).To(BeZero())
+				Expect(fakeOCIRuntime.ExecCallCount()).To(Equal(1))
 			})
 		})
 	})
@@ -836,7 +751,7 @@ var _ = Describe("Rundmc", func() {
 					entitlementPerSharePercent,
 					fakeRuntimeStopper,
 					fakeCPUCgrouper,
-					false, // execPeas: default stock behavior
+					false, // imageBackedPeas: default stock behavior
 				)
 			})
 

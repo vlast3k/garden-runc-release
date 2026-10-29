@@ -61,7 +61,7 @@ func TestPeaRestartCleansMissingTaskWithoutInventingWait(t *testing.T) {
 	runtime := runcontainerd.New(manager, processes, nil, nil, nil, nil, false, nil, nil, nil, false, nil)
 	volume := &runcontainerdfakes.FakeVolumizer{}
 	volume.DestroyReturnsOnCall(0, errors.New("image busy"))
-	runcontainerd.NewRunContainerPea(runtime, processes, volume, false)
+	runtime.SetPeaRunner(runcontainerd.NewRunContainerPea(runtime, processes, volume))
 	if err := runtime.WaitAndCleanPea(log, "child"); err == nil || manager.RemoveBundleCallCount() != 0 {
 		t.Fatal("orphan cleanup lost ownership before deleting image")
 	}
@@ -121,7 +121,8 @@ func TestPeaAttachUsesChildAndSingleOutputOwner(t *testing.T) {
 	processes.GetTaskReturns(backing, nil)
 	runtime := runcontainerd.New(manager, processes, nil, nil, nil, nil, false, &runcontainerdfakes.FakeCgroupManager{}, nil, nil, false, nil)
 	volume := &runcontainerdfakes.FakeVolumizer{}
-	runner := runcontainerd.NewRunContainerPea(runtime, processes, volume, false)
+	runner := runcontainerd.NewRunContainerPea(runtime, processes, volume)
+	runtime.SetPeaRunner(runner)
 	var primary, attached bytes.Buffer
 	p, err := runner.RunPea(log, "child", goci.Bndl{Spec: specs.Spec{Linux: &specs.Linux{}}}, "parent", garden.ProcessIO{Stdout: &primary}, false, nil, nil)
 	if err != nil {
@@ -178,7 +179,7 @@ func TestPeaAttachRejectsMissingParentBeforeOpeningChildIO(t *testing.T) {
 			})
 			processes := &availableTaskAttacher{FakeProcessManager: &runcontainerdfakes.FakeProcessManager{}}
 			runtime := runcontainerd.New(manager, processes, nil, nil, nil, nil, false, nil, nil, nil, false, nil)
-			runcontainerd.NewRunContainerPea(runtime, processes, &runcontainerdfakes.FakeVolumizer{}, false)
+			runtime.SetPeaRunner(runcontainerd.NewRunContainerPea(runtime, processes, &runcontainerdfakes.FakeVolumizer{}))
 			process, err := runtime.Attach(log, "parent", "child", garden.ProcessIO{})
 			if process != nil || err == nil || processes.attachments != 0 || processes.GetTaskCallCount() != 0 || processes.GetProcessCallCount() != 0 {
 				t.Fatalf("missing parent opened child IO: process=%v error=%v", process, err)

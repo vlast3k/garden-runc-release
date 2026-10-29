@@ -41,7 +41,8 @@ func TestPeaOutputOnlyAttachThroughGardenHTTP(t *testing.T) {
 	processes.GetTaskReturns(backing, nil)
 	runtime := runcontainerd.New(manager, processes, nil, nil, nil, nil, false, &runcontainerdfakes.FakeCgroupManager{}, nil, nil, false, nil)
 	volume := &runcontainerdfakes.FakeVolumizer{}
-	runner := runcontainerd.NewRunContainerPea(runtime, processes, volume, false)
+	runner := runcontainerd.NewRunContainerPea(runtime, processes, volume)
+	runtime.SetPeaRunner(runner)
 	original, err := runner.RunPea(log, "child", goci.Bndl{Spec: specs.Spec{Linux: &specs.Linux{}}}, "parent", garden.ProcessIO{}, false, nil, nil)
 	if err != nil {
 		t.Fatal(err)

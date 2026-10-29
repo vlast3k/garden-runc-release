@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -120,7 +119,6 @@ type Containerizer struct {
 	cpuEntitlementPerShare float64
 	runtimeStopper         RuntimeStopper
 	cpuCgrouper            CPUCgrouper
-	execPeas               bool
 	imageBackedPeas        bool
 }
 
@@ -137,7 +135,7 @@ func New(
 	cpuEntitlementPerShare float64,
 	runtimeStopper RuntimeStopper,
 	cpuCgrouper CPUCgrouper,
-	execPeas bool,
+	imageBackedPeas bool,
 ) *Containerizer {
 	containerizer := &Containerizer{
 		depot:                  depot,
@@ -152,7 +150,7 @@ func New(
 		cpuEntitlementPerShare: cpuEntitlementPerShare,
 		runtimeStopper:         runtimeStopper,
 		cpuCgrouper:            cpuCgrouper,
-		execPeas:               execPeas,
+		imageBackedPeas:        imageBackedPeas,
 	}
 	return containerizer
 }
@@ -205,14 +203,9 @@ func (c *Containerizer) Start(log lager.Logger, handle string) error {
 	return c.runtime.Start(log, handle)
 }
 
-// Run runs a process inside a running container
-// EnableImageBackedPeas selects the subcontainer path. Named users are resolved
-// by PeaCreator against the newly prepared image, not the parent's Sentry PID.
-func (c *Containerizer) EnableImageBackedPeas() {
-	c.imageBackedPeas = true
-	c.execPeas = false
-}
-
+// Run runs a process inside a running container. With imageBackedPeas, named
+// pea users are resolved by PeaCreator against the pea image rather than
+// through the parent's host PID, which cannot see a grouped child's rootfs.
 func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("run", lager.Data{"handle": handle, "path": spec.Path})
 
@@ -222,15 +215,6 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	if isPea(spec) {
 		if c.imageBackedPeas {
 			return c.peaCreator.CreatePea(log, spec, io, handle)
-		}
-		if c.execPeas {
-			if err := c.validateExecPea(log, handle, spec); err != nil {
-				return nil, err
-			}
-			log.Info("exec-pea-as-process", lager.Data{"path": spec.Path})
-			spec.Image = garden.ImageRef{}
-			spec.BindMounts = nil
-			return c.runtime.Exec(log, handle, spec, io)
 		}
 
 		if shouldResolveUsername(spec.User) {
@@ -252,116 +236,6 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	}
 
 	return c.runtime.Exec(log, handle, spec, io)
-}
-
-func (c *Containerizer) validateExecPea(log lager.Logger, handle string, spec garden.ProcessSpec) error {
-	preloaded := strings.HasPrefix(spec.Image.URI, "preloaded:") && strings.TrimPrefix(spec.Image.URI, "preloaded:") != ""
-	packagePath := filepath.Dir(filepath.Dir(spec.Image.URI)) == "/var/vcap/packages" && filepath.Base(spec.Image.URI) == "rootfs.tar" && filepath.Clean(spec.Image.URI) == spec.Image.URI
-	if (!preloaded && !packagePath) || spec.Image.Username != "" || spec.Image.Password != "" {
-		return fmt.Errorf("unsupported pea exec: only preloaded CF asset compatibility requests or canonical packaged rootfs paths are supported; image-backed isolation is unavailable")
-	}
-	if spec.OverrideContainerLimits != nil && *spec.OverrideContainerLimits != (garden.ProcessLimits{}) {
-		return fmt.Errorf("unsupported pea exec: independent CPU or memory limits are unavailable")
-	}
-	assetPaths := execPeaAssetPaths(spec)
-	if len(assetPaths) == 0 {
-		return fmt.Errorf("unsupported pea exec: executable must be an existing parent CF asset")
-	}
-	_, bundle, err := c.runtime.BundleInfo(log, handle)
-	if err != nil {
-		return fmt.Errorf("validate pea exec parent bundle: %w", err)
-	}
-	assetMounts := make([]*specs.Mount, len(assetPaths))
-	for index := range bundle.Spec.Mounts {
-		mount := &bundle.Spec.Mounts[index]
-		if mount.Destination != filepath.Clean(mount.Destination) || !filepath.IsAbs(mount.Destination) {
-			destination := filepath.Clean("/" + mount.Destination)
-			for _, assetPath := range assetPaths {
-				if assetPath == destination || strings.HasPrefix(assetPath, strings.TrimSuffix(destination, "/")+"/") {
-					return fmt.Errorf("unsupported pea exec: noncanonical parent mount overlaps the executable")
-				}
-			}
-			for _, requested := range spec.BindMounts {
-				requestedDestination := filepath.Clean(requested.DstPath)
-				if requestedDestination == destination || strings.HasPrefix(requestedDestination, strings.TrimSuffix(destination, "/")+"/") || strings.HasPrefix(destination, strings.TrimSuffix(requestedDestination, "/")+"/") {
-					return fmt.Errorf("unsupported pea exec: noncanonical parent mount overlaps a requested mount")
-				}
-			}
-			continue
-		}
-		for assetIndex, assetPath := range assetPaths {
-			if assetPath == mount.Destination || strings.HasPrefix(assetPath, mount.Destination+"/") {
-				if assetMounts[assetIndex] == nil || len(mount.Destination) >= len(assetMounts[assetIndex].Destination) {
-					assetMounts[assetIndex] = mount
-				}
-			}
-		}
-	}
-	for _, mount := range assetMounts {
-		if mount == nil || !execPeaBindMount(*mount) || !strings.HasPrefix(mount.Destination, "/etc/cf-assets/") {
-			return fmt.Errorf("unsupported pea exec: executable is not covered by a parent CF asset bind mount")
-		}
-	}
-	for _, requested := range spec.BindMounts {
-		if requested.Origin != garden.BindMountOriginHost || !filepath.IsAbs(requested.SrcPath) || filepath.Clean(requested.SrcPath) != requested.SrcPath || !filepath.IsAbs(requested.DstPath) || filepath.Clean(requested.DstPath) != requested.DstPath {
-			return fmt.Errorf("unsupported pea exec: bind mounts must match existing absolute host mounts")
-		}
-		matched := false
-		for _, mount := range bundle.Spec.Mounts {
-			if mount.Destination != requested.DstPath {
-				continue
-			}
-			readOnly := false
-			readWrite := false
-			for _, option := range mount.Options {
-				if option == "ro" {
-					readOnly = true
-				} else if option == "rw" {
-					readWrite = true
-				}
-			}
-			if readOnly && readWrite {
-				return fmt.Errorf("unsupported pea exec: parent mount has ambiguous ro and rw options")
-			}
-			matched = execPeaBindMount(mount) && mount.Source == requested.SrcPath && ((requested.Mode == garden.BindMountModeRO && readOnly) || (requested.Mode == garden.BindMountModeRW && !readOnly))
-		}
-		if !matched {
-			return fmt.Errorf("unsupported pea exec: requested bind mount is not identical to the parent mount")
-		}
-	}
-	return nil
-}
-
-func execPeaAssetPaths(spec garden.ProcessSpec) []string {
-	if strings.HasPrefix(spec.Path, "/etc/cf-assets/") && filepath.Clean(spec.Path) == spec.Path {
-		return []string{spec.Path}
-	}
-	if spec.Path != "sh" || len(spec.Args) != 2 || spec.Args[0] != "-c" {
-		return nil
-	}
-	const prefix = "trap 'kill -9 0' TERM; /etc/cf-assets/envoy/envoy -c /etc/cf-assets/envoy_config/envoy.yaml --drain-time-s "
-	const suffix = " --log-level critical& pid=$!; wait $pid"
-	if !strings.HasPrefix(spec.Args[1], prefix) || !strings.HasSuffix(spec.Args[1], suffix) {
-		return nil
-	}
-	drain := strings.TrimSuffix(strings.TrimPrefix(spec.Args[1], prefix), suffix)
-	seconds, err := strconv.ParseUint(drain, 10, 64)
-	if err != nil || strconv.FormatUint(seconds, 10) != drain {
-		return nil
-	}
-	return []string{"/etc/cf-assets/envoy/envoy", "/etc/cf-assets/envoy_config/envoy.yaml"}
-}
-
-func execPeaBindMount(mount specs.Mount) bool {
-	if mount.Type == "bind" {
-		return true
-	}
-	for _, option := range mount.Options {
-		if option == "bind" || option == "rbind" {
-			return true
-		}
-	}
-	return false
 }
 
 func isPea(spec garden.ProcessSpec) bool {

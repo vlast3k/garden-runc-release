@@ -39,7 +39,7 @@ var _ = Describe("RunContainerPea", func() {
 		var err error
 		Expect(err).NotTo(HaveOccurred())
 
-		runContainerPea = runcontainerd.NewRunContainerPea(fakePeaManager, fakeProcessManager, fakeVolumizer, false)
+		runContainerPea = runcontainerd.NewRunContainerPea(fakePeaManager, fakeProcessManager, fakeVolumizer)
 	})
 
 	Describe("RunPea", func() {

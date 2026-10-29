@@ -14,7 +14,7 @@ import (
 // RunscRuntime (validated gVisor/runsc shim). Unsupported runtime types
 // are rejected at startup with an actionable error. This prevents unknown
 // runtimes from silently inheriting runsc-specific workarounds such as
-// CREATED-task shim cleanup, pea-to-exec translation, or exec-based
+// CREATED-task shim cleanup, grouped image-backed peas, or exec-based
 // archive streaming.
 type RuntimePolicy int
 
@@ -31,7 +31,7 @@ const (
 	// (io.containerd.runsc.v1). It selects:
 	//   - exec-based archive streaming (ExecStreamer, not NstarStreamer)
 	//   - containerd task-API metrics (ContainerdStatser, not runc events)
-	//   - pea-to-exec translation (execPeas)
+	//   - image-backed grouped peas (requires use_containerd_for_processes)
 	//   - runsc-specific OCI task options (no NoNewKeyring, no UID/GID)
 	//   - Windows spec section stripping (runsc rejects it)
 	//   - CREATED-task shim cleanup (host-PID intervention for stuck shims)
