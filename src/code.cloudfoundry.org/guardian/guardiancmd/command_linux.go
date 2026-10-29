@@ -143,6 +143,11 @@ func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, use
 	if err != nil {
 		return nil, nil, nil, nil, nil, runcontainerd.StockRuntime, err
 	}
+	// Grouped peas, exec streaming and child cleanup all use containerd tasks.
+	if policy.IsAlternative() && !f.config.Containerd.UseContainerdForProcesses {
+		return nil, nil, nil, nil, nil, runcontainerd.StockRuntime, fmt.Errorf(
+			"containerd runtime type %q requires --use-containerd-for-processes", f.config.Containerd.RuntimeType)
+	}
 
 	runtimeType := f.config.Containerd.RuntimeType
 	if runtimeType == "" {
@@ -169,7 +174,8 @@ func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, use
 
 	containerdManager := runcontainerd.New(nerd, nerd, processBuilder, userLookupper, wireExecer(pidGetter), statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager, f.WireMkdirer(), peaHandlesGetter, f.config.Containers.CleanupProcessDirsOnWait, nerdStopper)
 
-	peaRunner := runcontainerd.NewRunContainerPea(containerdManager, nerd, volumizer, f.config.Containers.CleanupProcessDirsOnWait)
+	peaRunner := runcontainerd.NewRunContainerPea(containerdManager, nerd, volumizer)
+	containerdManager.SetPeaRunner(peaRunner)
 
 	privilegeChecker := &privchecker.PrivilegeChecker{ContainerManager: nerd, Log: log}
 	peaBundleLoader := runcontainerd.NewBndlLoader(nerd)

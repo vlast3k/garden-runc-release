@@ -7,7 +7,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/peas/peasfakes"
 	"code.cloudfoundry.org/guardian/rundmc/peas/processwaiter/processwaiterfakes"
-	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -88,23 +87,6 @@ var _ = Describe("PeaCleaner", func() {
 	})
 
 	Describe("CleanAll", func() {
-		Context("with a grouped child task waiter", func() {
-			var waited chan string
-			BeforeEach(func() {
-				waited = make(chan string, 1)
-				cleaner.(*peas.PeaCleaner).TaskWaiter = func(_ lager.Logger, handle string) error {
-					waited <- handle
-					return nil
-				}
-			})
-			It("waits on the individual child task instead of its shared host PID", func() {
-				Expect(cleanErr).NotTo(HaveOccurred())
-				Eventually(waited).Should(Receive(Equal("pea-00")))
-				Eventually(fakeVolumizer.DestroyCallCount).Should(Equal(1))
-				Expect(fakePeaPidGetter.GetPeaPidCallCount()).To(BeZero())
-			})
-		})
-
 		BeforeEach(func() {
 			fakeRuntime.ContainerHandlesReturns([]string{"container-handle"}, nil)
 			fakeRuntime.ContainerPeaHandlesReturns([]string{"pea-00"}, nil)

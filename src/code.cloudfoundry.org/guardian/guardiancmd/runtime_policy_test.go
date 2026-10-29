@@ -21,6 +21,7 @@ import (
 	"code.cloudfoundry.org/guardian/gardener/gardenerfakes"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
+	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/runcontainerdfakes"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
@@ -41,7 +42,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// CFAR-1515/1520: Runtime-type policy tests. The execPeas and streamer
+// CFAR-1515/1520: Runtime-type policy tests. The image-backed pea and streamer
 // decisions depend on RuntimePolicy.IsAlternative(), resolved once at
 // startup via ResolveRuntimePolicy. These cases cover the real CLI
 // configuration space: empty (default runc), explicit stock runc-v2, an
@@ -49,7 +50,7 @@ import (
 //
 // Mutation scenario: if someone changes the condition (e.g. drops the
 // empty-string check), the stock runc case would incorrectly enable
-// execPeas and ExecStreamer, breaking pea creation for all stock cells.
+// image-backed peas and ExecStreamer, breaking pea creation for all stock cells.
 // If the unsupported-type guard is removed, unknown runtimes would
 // silently inherit all runsc-specific workarounds.
 
@@ -79,8 +80,8 @@ func TestContainerizerWithoutContainerdUsesStockStrategies(t *testing.T) {
 			if got := wired.FieldByName("streamer").Elem().Type().String(); got != "*rundmc.NstarStreamer" {
 				t.Errorf("streamer = %s, want stock *rundmc.NstarStreamer", got)
 			}
-			if wired.FieldByName("execPeas").Bool() {
-				t.Error("stock runtime enabled runsc pea translation without a containerd socket")
+			if wired.FieldByName("imageBackedPeas").Bool() {
+				t.Error("stock runtime enabled runsc image-backed peas without a containerd socket")
 			}
 		})
 	}
@@ -127,12 +128,18 @@ func TestContainerizerWithContainerdUsesValidatedStrategies(t *testing.T) {
 				})
 				factory := runtimeWiringFactory{LinuxFactory: &LinuxFactory{config: cmd}}
 				containerizer, cleaner, err := cmd.wireContainerizer(lager.NewLogger("runtime-wiring"), factory, nil, nil, 1, depot.NetworkDepot{}, nil)
+				wantError := ""
 				if test.wantError {
-					if err == nil || !strings.Contains(err.Error(), "unsupported containerd runtime type") || !strings.Contains(err.Error(), test.runtimeType) {
-						t.Fatalf("construction error = %v, want actionable rejection for %q", err, test.runtimeType)
+					wantError = "unsupported containerd runtime type"
+				} else if test.imageBackedPeas && !containerdProcesses {
+					wantError = "requires --use-containerd-for-processes"
+				}
+				if wantError != "" {
+					if err == nil || !strings.Contains(err.Error(), wantError) || !strings.Contains(err.Error(), test.runtimeType) {
+						t.Fatalf("construction error = %v, want actionable %q rejection for %q", err, wantError, test.runtimeType)
 					}
 					if containerizer != nil || cleaner != nil {
-						t.Error("unsupported runtime returned partially wired components")
+						t.Error("rejected runtime returned partially wired components")
 					}
 				} else {
 					if err != nil {
@@ -145,11 +152,15 @@ func TestContainerizerWithContainerdUsesValidatedStrategies(t *testing.T) {
 					if got := wired.FieldByName("streamer").Elem().Type().String(); got != test.streamer {
 						t.Errorf("streamer = %s, want %s", got, test.streamer)
 					}
-					if wired.FieldByName("execPeas").Bool() {
-						t.Error("production wiring still enables parent-rootfs exec peas")
-					}
 					if got := wired.FieldByName("imageBackedPeas").Bool(); got != test.imageBackedPeas {
 						t.Errorf("imageBackedPeas = %v, want %v", got, test.imageBackedPeas)
+					}
+					peaCleaner, ok := cleaner.(*peas.PeaCleaner)
+					if test.imageBackedPeas && !ok {
+						t.Fatalf("cleaner = %T, want *peas.PeaCleaner", cleaner)
+					}
+					if ok && (peaCleaner.ImageBackedPeas != nil) != test.imageBackedPeas {
+						t.Errorf("cleaner image-backed restart cleanup = %v, want %v", peaCleaner.ImageBackedPeas != nil, test.imageBackedPeas)
 					}
 				}
 				fixture.mutex.Lock()
@@ -364,6 +375,7 @@ func TestWireContainerdMetricsThroughGarden(t *testing.T) {
 			factory := &LinuxFactory{config: &CommonCommand{}}
 			factory.config.Containerd.Socket = containerdSocket
 			factory.config.Containerd.RuntimeType = test.runtimeType
+			factory.config.Containerd.UseContainerdForProcesses = true
 			manager, _, _, _, _, _, err := factory.WireContainerd(nil, nil, func(runrunc.PidGetter) *runrunc.Execer {
 				return nil
 			}, stockStatser, log, nil, nil, nil)
@@ -539,7 +551,8 @@ func (rpc *runtimeMetricsTasksServer) Metrics(context.Context, *tasksapi.Metrics
 
 // CFAR-1520: WireContainerd must reject unsupported runtime types at startup
 // with an actionable error, preventing unknown runtimes from silently
-// inheriting runsc-specific workarounds (cleanup7, ExecStreamer, execPeas,
+// inheriting runsc-specific workarounds (cleanup7, ExecStreamer, image-backed
+// peas,
 // ContainerdStatser). This test exercises the real LinuxFactory wiring path.
 
 func TestWireContainerdRejectsUnsupportedRuntime(t *testing.T) {
@@ -582,7 +595,8 @@ func TestWireContainerdRejectsUnsupportedRuntime(t *testing.T) {
 // CFAR-1520: Behavior matrix — verifies the complete runtime-type decision
 // space at the CLI wiring layer. For each of the four input types (empty,
 // explicit runc, runsc, unsupported), verifies that ResolveRuntimePolicy
-// produces the expected RuntimePolicy which determines streamer, execPeas,
+// produces the expected RuntimePolicy which determines streamer, image-backed
+// peas,
 // and statser selection. The statser selection is covered by
 // TestWireContainerdMetricsThroughGarden above; the Nerd-level decisions
 // (strip-Windows, task-opts, cleanup7) are covered by the policy unit tests
@@ -595,7 +609,7 @@ func TestWireContainerdRejectsUnsupportedRuntime(t *testing.T) {
 // Matrix columns:
 //
 //	policy.IsAlternative() → streamer (ExecStreamer vs NstarStreamer)
-//	policy.IsAlternative() → execPeas (pea-to-exec translation)
+//	policy.IsAlternative() → image-backed grouped peas
 //	policy.IsAlternative() → statser (ContainerdStatser vs runc events)
 //	RunscRuntime           → strip-Windows, cleanup7 (runsc-specific)
 //	StockRuntime           → NoNewKeyring, UID/GID task opts (stock-specific)
@@ -607,7 +621,7 @@ func TestRuntimePolicyBehaviorMatrix(t *testing.T) {
 		runtimeType string
 
 		// Expected wiring decisions
-		wantIsAlt  bool // drives streamer, execPeas, statser
+		wantIsAlt  bool // drives streamer, image-backed peas, statser
 		wantReject bool // unsupported types rejected at WireContainerd
 	}{
 		{
@@ -621,7 +635,7 @@ func TestRuntimePolicyBehaviorMatrix(t *testing.T) {
 			wantIsAlt:   false,
 		},
 		{
-			name:        "runsc-v1: exec streamer, exec peas, containerd statser",
+			name:        "runsc-v1: exec streamer, image-backed peas, containerd statser",
 			runtimeType: "io.containerd.runsc.v1",
 			wantIsAlt:   true,
 		},

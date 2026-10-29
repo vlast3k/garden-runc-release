@@ -69,12 +69,14 @@ type PeaCreator struct {
 	ProcessBuilder   runrunc.ProcessBuilder
 	ExecRunner       ExecRunner
 	PeaCleaner       gardener.PeaCleaner
-	// Non-nil only for image-backed subcontainers. Stock still uses its
-	// existing temporary-pea username resolver before entering CreatePea.
-	RootfsUserLookupper users.UserLookupper
-	// GroupedRunsc uses virtual parent namespaces, not the Sentry's host PID
-	// and nobody-only user namespace. Stock peas retain their setns behavior.
+	// GroupedRunsc creates image-backed runsc subcontainers: they use virtual
+	// parent namespaces rather than the Sentry's host PID, share the sandbox's
+	// limits and resolve named users from the new image. Stock peas retain
+	// their setns behavior and pre-resolved uid:gid users.
 	GroupedRunsc bool
+	// RootfsUserLookupper overrides the grouped image user lookup; nil uses
+	// users.LookupImageUser.
+	RootfsUserLookupper users.UserLookupper
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle string) (_ garden.Process, theErr error) {
@@ -107,7 +109,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		processSpec.Dir = "/"
 	}
 	var resolvedUser *users.ExecUser
-	if p.RootfsUserLookupper == nil {
+	if !p.GroupedRunsc {
 		userUID, userGID, err := parseUser(processSpec.User)
 		if err != nil {
 			return errs("parse-user", err)
@@ -137,8 +139,12 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	if runtimeSpec.Root == nil || runtimeSpec.Root.Path == "" {
 		return errs("creating-volume", errors.New("image rootfs path is missing"))
 	}
-	if p.RootfsUserLookupper != nil {
-		resolvedUser, err = p.RootfsUserLookupper.Lookup(runtimeSpec.Root.Path, processSpec.User)
+	if p.GroupedRunsc {
+		lookupper := p.RootfsUserLookupper
+		if lookupper == nil {
+			lookupper = users.LookupFunc(users.LookupImageUser)
+		}
+		resolvedUser, err = lookupper.Lookup(runtimeSpec.Root.Path, processSpec.User)
 		if err != nil {
 			return errs("lookup-image-user", err)
 		}

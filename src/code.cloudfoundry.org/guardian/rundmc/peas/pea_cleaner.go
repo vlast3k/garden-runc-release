@@ -1,8 +1,6 @@
 package peas
 
 import (
-	"fmt"
-
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/peas/processwaiter"
 	"code.cloudfoundry.org/lager/v3"
@@ -15,11 +13,16 @@ type PeaCleaner struct {
 	Waiter       processwaiter.ProcessWaiter
 	Runtime      Runtime
 	PeaPidGetter PeaPidGetter
-	// TaskWaiter is set for grouped runsc children: their host PID identifies
-	// the shared Sentry, not the lifetime of the individual child init task.
-	TaskWaiter func(log lager.Logger, handle string) error
-	// TaskWaitAndCleaner owns both Wait and cleanup with attached callers.
-	TaskWaitAndCleaner func(log lager.Logger, handle string) error
+	// ImageBackedPeas is set for grouped runsc children. Their host PID is the
+	// shared Sentry, so restart cleanup follows each child task instead.
+	ImageBackedPeas ImageBackedPeas
+}
+
+// ImageBackedPeas discovers grouped children directly, because their metadata
+// can outlive the parent, and owns both Wait and cleanup for each child.
+type ImageBackedPeas interface {
+	PeaHandles() ([]string, error)
+	WaitAndCleanPea(log lager.Logger, handle string) error
 }
 
 //counterfeiter:generate . Runtime
@@ -71,20 +74,14 @@ func (p *PeaCleaner) CleanAll(log lager.Logger) error {
 	log.Info("start")
 	defer log.Info("end")
 
-	if p.TaskWaitAndCleaner != nil {
-		// Image-backed metadata can outlive its parent. Discover children directly
-		// and let the shared lifecycle owner validate recorded ownership/cleanup.
-		runtime, ok := p.Runtime.(interface{ PeaHandles() ([]string, error) })
-		if !ok {
-			return fmt.Errorf("runtime does not support image-backed pea discovery")
-		}
-		handles, err := runtime.PeaHandles()
+	if p.ImageBackedPeas != nil {
+		handles, err := p.ImageBackedPeas.PeaHandles()
 		if err != nil {
 			return err
 		}
 		for _, handle := range handles {
 			go func(handle string) {
-				if err := p.TaskWaitAndCleaner(log, handle); err != nil {
+				if err := p.ImageBackedPeas.WaitAndCleanPea(log, handle); err != nil {
 					log.Error("error-waiting-and-cleaning-pea-task", err, lager.Data{"peaHandle": handle})
 				}
 			}(handle)
@@ -105,18 +102,6 @@ func (p *PeaCleaner) CleanAll(log lager.Logger) error {
 		}
 
 		for _, peaHandle := range peaHandles {
-			if p.TaskWaiter != nil {
-				go func(handle string) {
-					if err := p.TaskWaiter(log, handle); err != nil {
-						log.Error("error-waiting-on-pea-task", err, lager.Data{"peaHandle": handle})
-						return
-					}
-					if err := p.Clean(log, handle); err != nil {
-						log.Error("error-cleaning-up-pea-task", err, lager.Data{"peaHandle": handle})
-					}
-				}(peaHandle)
-				continue
-			}
 			peaPID, err := p.PeaPidGetter.GetPeaPid(log, sandboxHandle, peaHandle)
 			if err != nil {
 				log.Error("error-getting-pea-pid", err, lager.Data{"sandboxHandle": sandboxHandle, "peaHandle": peaHandle})

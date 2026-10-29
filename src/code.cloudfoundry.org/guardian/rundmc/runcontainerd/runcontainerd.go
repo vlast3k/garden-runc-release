@@ -161,19 +161,10 @@ func (r *RunContainerd) Start(log lager.Logger, id string) error {
 	return r.containerManager.Start(log, id)
 }
 
-// WaitPea follows the child task, never the lifetime of the shared Sentry PID.
-func (r *RunContainerd) WaitPea(log lager.Logger, id string) error {
-	process, err := r.processManager.GetTask(log, id)
-	if err != nil {
-		var noTask TaskNotFoundError
-		var noContainer ContainerNotFoundError
-		if errors.As(err, &noTask) || errors.As(err, &noContainer) {
-			return nil
-		}
-		return err
-	}
-	_, err = process.Wait()
-	return err
+// SetPeaRunner routes Attach and restart cleanup of pea containers to the
+// runner that owns their IO and shared Wait/deletion.
+func (r *RunContainerd) SetPeaRunner(peaRunner *RunContainerPea) {
+	r.peaRunner = peaRunner
 }
 
 func updateAnnotationsIfNeeded(bundle *goci.Bndl) {

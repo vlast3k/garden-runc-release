@@ -322,13 +322,11 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger, metricsProvider *met
 	}, nil
 }
 
-func (cmd *CommonCommand) wirePeaCleaner(factory GardenFactory, volumizer gardener.Volumizer, runtime rundmc.OCIRuntime, pidGetter peas.ProcessPidGetter, imageBacked bool) gardener.PeaCleaner {
-	if cmd.Containerd.UseContainerdForProcesses || imageBacked {
+func (cmd *CommonCommand) wirePeaCleaner(factory GardenFactory, volumizer gardener.Volumizer, runtime rundmc.OCIRuntime, pidGetter peas.ProcessPidGetter, imageBackedPeas peas.ImageBackedPeas) gardener.PeaCleaner {
+	if cmd.Containerd.UseContainerdForProcesses {
 		nerdDeleter := runcontainerd.NewDeleter(runtime)
 		cleaner := peas.NewPeaCleaner(deleter.NewDeleter(runtime, nerdDeleter), volumizer, runtime, pidGetter)
-		if imageBacked {
-			cleaner.(*peas.PeaCleaner).TaskWaitAndCleaner = runtime.(*runcontainerd.RunContainerd).WaitAndCleanPea
-		}
+		cleaner.(*peas.PeaCleaner).ImageBackedPeas = imageBackedPeas
 		return cleaner
 	}
 
@@ -640,9 +638,10 @@ func (cmd *CommonCommand) wireContainerizer(
 
 	// runtimePolicy tracks the resolved runtime type. It defaults to stock
 	// and is set to the actual policy when containerd is active. All
-	// downstream decisions (streamer, execPeas) branch on this single value
-	// instead of re-resolving from the config string.
+	// downstream decisions (streamer, image-backed peas) branch on this single
+	// value instead of re-resolving from the config string.
 	runtimePolicy := runcontainerd.StockRuntime
+	var imageBackedPeas peas.ImageBackedPeas
 
 	if cmd.useContainerd() {
 		var err error
@@ -665,9 +664,12 @@ func (cmd *CommonCommand) wireContainerizer(
 		containersPidGetter = nerdPidGetter
 		runtimeStopper = runContainerd
 
-		if cmd.Containerd.UseContainerdForProcesses || runtimePolicy.IsAlternative() {
+		if cmd.Containerd.UseContainerdForProcesses {
 			peaPidGetter = nerdPidGetter
 			peasExecRunner = peaRunner
+		}
+		if runtimePolicy.IsAlternative() {
+			imageBackedPeas = runContainerd
 		}
 
 	} else {
@@ -696,7 +698,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
 
-	peaCleaner := cmd.wirePeaCleaner(factory, volumizer, ociRuntime, peaPidGetter, runtimePolicy.IsAlternative())
+	peaCleaner := cmd.wirePeaCleaner(factory, volumizer, ociRuntime, peaPidGetter, imageBackedPeas)
 	peaCreator = &peas.PeaCreator{
 		Volumizer:        volumizer,
 		PidGetter:        containersPidGetter,
@@ -707,10 +709,7 @@ func (cmd *CommonCommand) wireContainerizer(
 		BundleSaver:      bundleSaver,
 		ExecRunner:       peasExecRunner,
 		PeaCleaner:       peaCleaner,
-	}
-	if runtimePolicy.IsAlternative() {
-		peaCreator.RootfsUserLookupper = users.LookupFunc(users.LookupImageUser)
-		peaCreator.GroupedRunsc = true
+		GroupedRunsc:     runtimePolicy.IsAlternative(),
 	}
 
 	peaUsernameResolver := &peas.PeaUsernameResolver{
@@ -735,10 +734,7 @@ func (cmd *CommonCommand) wireContainerizer(
 		streamer = rundmc.NewNstarStreamer(ociRuntime, nstar)
 	}
 
-	containerizer := rundmc.New(depot, template, ociRuntime, streamer, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper, false)
-	if runtimePolicy.IsAlternative() {
-		containerizer.EnableImageBackedPeas()
-	}
+	containerizer := rundmc.New(depot, template, ociRuntime, streamer, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper, runtimePolicy.IsAlternative())
 	return containerizer, peaCleaner, nil
 }
 

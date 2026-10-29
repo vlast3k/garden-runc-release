@@ -120,6 +120,24 @@ var _ = Describe("PeaCreator", func() {
 	})
 
 	Describe("image-rootfs users and failed-stage cleanup", func() {
+		var imageUsers *usersfakes.FakeUserLookupper
+
+		BeforeEach(func() {
+			imageUsers = new(usersfakes.FakeUserLookupper)
+			imageUsers.LookupReturns(&users.ExecUser{}, nil)
+			peaCreator.RootfsUserLookupper = imageUsers
+		})
+
+		It("keeps stock uid:gid parsing and ignores the image user lookup", func() {
+			processSpec.User = "1:2"
+			_, err := peaCreator.CreatePea(log, processSpec, pio, ctrHandle)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(imageUsers.LookupCallCount()).To(BeZero())
+			_, _, user := processBuilder.BuildProcessArgsForCall(0)
+			Expect(user.Uid).To(Equal(1))
+			Expect(user.Gid).To(Equal(2))
+		})
+
 		It("uses image-mapped gofer namespaces and the virtual parent PID namespace for grouped runsc", func() {
 			peaCreator.GroupedRunsc = true
 			mapping := []specs.LinuxIDMapping{{ContainerID: 0, HostID: 100000, Size: 65536}}
@@ -173,6 +191,8 @@ var _ = Describe("PeaCreator", func() {
 		})
 
 		It("resolves the child user after preparing its own image", func() {
+			peaCreator.GroupedRunsc = true
+			bundleGenerator.GenerateReturns(goci.Bundle(), nil)
 			lookup := new(usersfakes.FakeUserLookupper)
 			lookup.LookupReturns(&users.ExecUser{Uid: 1234, Gid: 4321, Home: "/child-home", Sgids: []int{5678}}, nil)
 			peaCreator.RootfsUserLookupper = lookup
@@ -189,6 +209,7 @@ var _ = Describe("PeaCreator", func() {
 		})
 
 		It("destroys the prepared volume if image user lookup fails", func() {
+			peaCreator.GroupedRunsc = true
 			lookup := new(usersfakes.FakeUserLookupper)
 			lookup.LookupReturns(nil, errors.New("missing-image-user"))
 			peaCreator.RootfsUserLookupper = lookup
