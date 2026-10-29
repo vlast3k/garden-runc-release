@@ -155,6 +155,13 @@ func TestContainerizerWithContainerdUsesValidatedStrategies(t *testing.T) {
 					if got := wired.FieldByName("imageBackedPeas").Bool(); got != test.imageBackedPeas {
 						t.Errorf("imageBackedPeas = %v, want %v", got, test.imageBackedPeas)
 					}
+					creator := wired.FieldByName("peaCreator").Elem()
+					if got := creator.Type().String(); got != "*peas.PeaCreator" {
+						t.Fatalf("peaCreator = %s, want *peas.PeaCreator", got)
+					}
+					if got := creator.Elem().FieldByName("GroupedRunsc").Bool(); got != test.imageBackedPeas {
+						t.Errorf("PeaCreator.GroupedRunsc = %v, want %v", got, test.imageBackedPeas)
+					}
 					peaCleaner, ok := cleaner.(*peas.PeaCleaner)
 					if test.imageBackedPeas && !ok {
 						t.Fatalf("cleaner = %T, want *peas.PeaCleaner", cleaner)
