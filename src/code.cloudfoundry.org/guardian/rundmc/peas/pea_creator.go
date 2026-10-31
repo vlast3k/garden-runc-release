@@ -75,7 +75,7 @@ type PeaCreator struct {
 	// their setns behavior and pre-resolved uid:gid users.
 	GroupedRunsc bool
 	// RootfsUserLookupper overrides the grouped image user lookup; nil uses
-	// users.LookupImageUser.
+	// users.LookupUser.
 	RootfsUserLookupper users.UserLookupper
 }
 
@@ -142,7 +142,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	if p.GroupedRunsc {
 		lookupper := p.RootfsUserLookupper
 		if lookupper == nil {
-			lookupper = users.LookupFunc(users.LookupImageUser)
+			lookupper = users.LookupFunc(users.LookupUser)
 		}
 		resolvedUser, err = lookupper.Lookup(runtimeSpec.Root.Path, processSpec.User)
 		if err != nil {

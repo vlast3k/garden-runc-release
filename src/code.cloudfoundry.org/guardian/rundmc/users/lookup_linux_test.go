@@ -3,6 +3,7 @@ package users_test
 import (
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	. "github.com/onsi/ginkgo/v2"
@@ -139,5 +140,90 @@ another:x:4:vcap`,
 				Expect(user.Sgids[0]).To(Equal(4))
 			})
 		})
+
+		Context("when identity files are symlinks", func() {
+			var hostDir string
+
+			// The same absolute path holds a host decoy and, inside the rootfs,
+			// the image's own file.
+			writeHostAndImage := func(name, hostContents, imageContents string) string {
+				hostPath := filepath.Join(hostDir, name)
+				Expect(os.WriteFile(hostPath, []byte(hostContents), 0644)).To(Succeed())
+				imagePath := filepath.Join(rootFsPath, hostPath)
+				Expect(os.MkdirAll(filepath.Dir(imagePath), 0755)).To(Succeed())
+				Expect(os.WriteFile(imagePath, []byte(imageContents), 0644)).To(Succeed())
+				return hostPath
+			}
+
+			replaceWithSymlink := func(name, target string) {
+				path := filepath.Join(rootFsPath, "etc", name)
+				Expect(os.Remove(path)).To(Succeed())
+				Expect(os.Symlink(target, path)).To(Succeed())
+			}
+
+			BeforeEach(func() {
+				var err error
+				hostDir, err = os.MkdirTemp("", "host-identity")
+				Expect(err).NotTo(HaveOccurred())
+				DeferCleanup(os.RemoveAll, hostDir)
+			})
+
+			It("resolves an absolute /etc/passwd symlink inside the rootfs, not on the host", func() {
+				target := writeHostAndImage("passwd",
+					"childuser:x:0:0:host:/root:/bin/sh\n",
+					"childuser:x:1234:4321:image:/child-home:/bin/sh\n")
+				replaceWithSymlink("passwd", target)
+
+				user, err := users.LookupUser(rootFsPath, "childuser")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(user.Uid).To(Equal(1234))
+				Expect(user.Gid).To(Equal(4321))
+				Expect(user.Home).To(Equal("/child-home"))
+			})
+
+			It("resolves an absolute /etc/group symlink inside the rootfs, not on the host", func() {
+				target := writeHostAndImage("group",
+					"hostroot:x:0:vcap\n",
+					"imagegroup:x:4242:vcap\n")
+				replaceWithSymlink("group", target)
+
+				user, err := users.LookupUser(rootFsPath, "vcap")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(user.Sgids).To(Equal([]int{4242}))
+			})
+
+			It("does not follow a relative symlink out of the rootfs", func() {
+				hostPasswd := filepath.Join(hostDir, "passwd")
+				Expect(os.WriteFile(hostPasswd, []byte("hostuser:x:0:0:host:/root:/bin/sh\n"), 0644)).To(Succeed())
+				replaceWithSymlink("passwd", "../../../../../../../.."+hostPasswd)
+
+				_, err := users.LookupUser(rootFsPath, "hostuser")
+				Expect(err).To(MatchError(ContainSubstring("unable to find user hostuser")))
+			})
+		})
+
+		DescribeTable("when an identity file is a FIFO", func(name string) {
+			fifo := filepath.Join(rootFsPath, "etc", name)
+			Expect(os.Remove(fifo)).To(Succeed())
+			Expect(syscall.Mkfifo(fifo, 0644)).To(Succeed())
+			// Release a reader blocked by a vulnerable implementation.
+			DeferCleanup(func() {
+				if f, err := os.OpenFile(fifo, os.O_RDWR, 0); err == nil {
+					f.Close()
+				}
+			})
+
+			result := make(chan error, 1)
+			go func() {
+				_, err := users.LookupUser(rootFsPath, "vcap")
+				result <- err
+			}()
+			var err error
+			Eventually(result, "5s").Should(Receive(&err))
+			Expect(err).To(MatchError(ContainSubstring("not a regular file")))
+		},
+			Entry("passwd", "passwd"),
+			Entry("group", "group"),
+		)
 	})
 })
